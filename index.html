@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>UNO</title>
+  <!-- SimplePeer 라이브러리 (CDN) -->
+  <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
+  <style>
+    /* 기본 배경 및 텍스트 */
+    body {
+      margin: 0;
+      padding: 0;
+      background: radial-gradient(ellipse at center, #0b6623 0%, #004d23 100%);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #ecf0f1;
+      overflow-x: hidden;
+    }
+    h1 { text-align: center; margin: 20px 0; }
+    /* 메인 메뉴: 나무 테이블 느낌 */
+    #menuScreen {
+      background: linear-gradient(135deg, #8B5A2B, #A0522D);
+      padding: 40px;
+      border: 5px solid #5D3A1A;
+      border-radius: 10px;
+      max-width: 500px;
+      margin: 60px auto;
+      box-shadow: 0 0 20px rgba(0,0,0,0.6);
+      text-align: center;
+    }
+    #menuScreen button {
+      padding: 10px 20px;
+      font-size: 18px;
+      border: none;
+      border-radius: 5px;
+      background: #27ae60;
+      color: #fff;
+      cursor: pointer;
+      margin: 5px;
+    }
+    #menuScreen button:hover { background: #1e8449; }
+    /* 시그널링 패널 */
+    #signalPanel {
+      display: none;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 8px;
+      text-align: center;
+    }
+    #signalPanel textarea {
+      width: 90%;
+      height: 100px;
+      margin: 10px 0;
+    }
+    /* 게임 컨테이너 */
+    #gameContainer {
+      display: none;
+      max-width: 1000px;
+      height: 100vh;
+      box-sizing: border-box;
+      margin: 0 auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    /* 핸드 영역: 상대는 카드 수만 표시, 내 패는 겹침 효과 */
+    .hand {
+      position: relative;
+      height: 140px;
+      margin: 0 auto;
+      width: 100%;
+      max-width: 900px;
+    }
+    #opponentInfo {
+      text-align: center;
+      margin: 10px;
+      font-size: 18px;
+    }
+    /* 중앙 테이블: 드로우/버림 파일 */
+    #table {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 50px;
+      position: relative;
+      margin: 20px 0;
+    }
+    #drawPile, #discardPile {
+      position: relative;
+      width: 70px;
+      height: 100px;
+    }
+    /* 카드 스타일 (UNO 카드 느낌) */
+    .card {
+      width: 70px;
+      height: 100px;
+      border-radius: 8px;
+      position: absolute;
+      box-shadow: 2px 2px 6px rgba(0,0,0,0.5);
+      background: linear-gradient(to bottom, #fff, #ddd);
+      border: 2px solid #bbb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 24px;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.3s ease;
+    }
+    .card:hover { transform: translateY(-8px); }
+    /* 색상별 카드 */
+    .red { border-color: #e74c3c; background: linear-gradient(to bottom, #ffcccc, #f1a9a0); }
+    .yellow { border-color: #f1c40f; background: linear-gradient(to bottom, #ffffcc, #f9e79f); color: #000; }
+    .green { border-color: #27ae60; background: linear-gradient(to bottom, #d4efdf, #7dcea0); }
+    .blue { border-color: #3498db; background: linear-gradient(to bottom, #d6eaf8, #85c1e9); }
+    .wild { border-color: #8e44ad; background: linear-gradient(to bottom, #e8daef, #d2b4de); }
+    /* 드로우/버림 파일 카드: 고정 위치 */
+    #drawPile .card, #discardPile .card { position: relative; left: 0; top: 0; cursor: default; }
+    /* 카드 이동 애니메이션 */
+    .play-animation {
+      animation: playCardAnim 0.5s ease-out;
+    }
+    @keyframes playCardAnim {
+      0% { transform: scale(1) rotate(0deg); opacity: 0; }
+      50% { transform: scale(1.2) rotate(10deg); opacity: 1; }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    /* 토스트 메시지 */
+    #toastContainer {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+    }
+    .toast {
+      background: rgba(0, 0, 0, 0.7);
+      padding: 10px 20px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      color: #fff;
+      font-size: 16px;
+      animation: fadeInOut 3s forwards;
+    }
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translateY(-20px); }
+      10% { opacity: 1; transform: translateY(0); }
+      90% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-20px); }
+    }
+    /* 중앙 메시지 */
+    #message {
+      font-size: 22px;
+      margin: 10px auto;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>우노 게임</h1>
+  <!-- 초기 메뉴 (역할 선택) -->
+  <div id="menuScreen">
+    <p>당신의 역할을 선택하세요.</p>
+    <button id="hostBtn">호스트 (딜러)</button>
+    <button id="clientBtn">클라이언트</button>
+  </div>
+  <!-- 시그널링 패널 (수동 시그널링) -->
+  <div id="signalPanel">
+    <div id="signalInstructions"></div>
+    <textarea id="signalData" placeholder="시그널 데이터를 여기에 복사하세요"></textarea>
+    <br>
+    <button id="sendSignalBtn">전송</button>
+  </div>
+  <!-- 게임 컨테이너 -->
+  <div id="gameContainer">
+    <div id="opponentInfo"></div>
+    <div id="table">
+      <div id="drawPile"></div>
+      <div id="discardPile"></div>
+    </div>
+    <div id="message"></div>
+    <div id="playerHand" class="hand"></div>
+  </div>
+  <!-- 토스트 메시지 컨테이너 -->
+  <div id="toastContainer"></div>
+  
+  <script>
+    /* ========== P2P 연결 및 시그널링 관련 ========= */
+    let peer = null;
+    let isHost = false; // 호스트 여부
+    let connectionEstablished = false;
+    const menuScreen = document.getElementById("menuScreen");
+    const signalPanel = document.getElementById("signalPanel");
+    const signalInstructions = document.getElementById("signalInstructions");
+    const signalData = document.getElementById("signalData");
+    const sendSignalBtn = document.getElementById("sendSignalBtn");
+    const gameContainer = document.getElementById("gameContainer");
+
+    document.getElementById("hostBtn").addEventListener("click", () => {
+      isHost = true;
+      startPeer();
+      menuScreen.style.display = "none";
+      signalPanel.style.display = "block";
+      signalInstructions.innerText = "호스트: 생성된 offer 데이터를 복사해서 상대에게 전달하세요.";
+    });
+
+    document.getElementById("clientBtn").addEventListener("click", () => {
+      isHost = false;
+      startPeer();
+      menuScreen.style.display = "none";
+      signalPanel.style.display = "block";
+      signalInstructions.innerText = "클라이언트: 호스트의 offer 데이터를 아래에 붙여넣고 '전송'을 누르세요.";
+    });
+
+    function startPeer() {
+      peer = new SimplePeer({
+        initiator: isHost,
+        trickle: false
+      });
+      peer.on('signal', data => {
+        // signal 이벤트 발생시 시그널 데이터를 표시
+        signalData.value = JSON.stringify(data);
+      });
+      peer.on('connect', () => {
+        connectionEstablished = true;
+        signalPanel.style.display = "none";
+        initGame(); // 연결 완료 후 게임 초기화
+      });
+      peer.on('data', data => {
+        handleMessage(JSON.parse(data));
+      });
+    }
+
+    sendSignalBtn.addEventListener("click", () => {
+      try {
+        const receivedSignal = JSON.parse(signalData.value);
+        peer.signal(receivedSignal);
+        signalData.value = "";
+        // 클라이언트인 경우, signalInstructions 업데이트
+        if (!isHost) {
+          signalInstructions.innerText = "시그널 데이터를 보냈습니다. 연결 대기중...";
+        } else {
+          signalInstructions.innerText = "답변 데이터를 받아주세요.";
+        }
+      } catch (e) {
+        showToast("올바른 시그널 데이터가 아닙니다!");
+      }
+    });
+    
+    /* ========== 게임 로직 ========== */
+    // UNO 카드 관련 데이터 및 상태 변수
+    const colors = ["red", "yellow", "green", "blue"];
+    const numbers = ["0","1","2","3","4","5","6","7","8","9"];
+    const specialTypes = ["skip", "reverse", "draw2"];
+    let deck = [];
+    let discardPile = [];
+    let myHand = [];
+    let opponentCardCount = 0;
+    let currentTurn = "host"; // 호스트가 시작
+    let gameStarted = false;
+
+    // 사운드 효과 (카드 놓기)
+    const cardSound = new Audio("data:audio/wav;base64,UklGRjQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg");
+
+    // 카드 아이콘 (숫자는 그대로, 특수/와일드 카드에 아이콘 적용)
+    function getCardIcon(card) {
+      if(card.type === "number") return card.value;
+      if(card.type === "special") {
+        if(card.value === "skip") return "🚫";
+        if(card.value === "reverse") return "🔄";
+        if(card.value === "draw2") return "＋2";
+      }
+      if(card.type === "wild") {
+        if(card.value === "wild") return "★";
+        if(card.value === "draw4") return "＋4";
+      }
+      return card.value;
+    }
+
+    // 덱 생성 (UNO 기본 카드 구성)
+    function createDeck() {
+      deck = [];
+      colors.forEach(color => {
+        deck.push({color, value:"0", type:"number"});
+        numbers.slice(1).forEach(num => {
+          deck.push({color, value: num, type:"number"});
+          deck.push({color, value: num, type:"number"});
+        });
+        specialTypes.forEach(special => {
+          deck.push({color, value: special, type:"special"});
+          deck.push({color, value: special, type:"special"});
+        });
+      });
+      for(let i=0;i<4;i++){
+        deck.push({color:"wild", value:"wild", type:"wild"});
+        deck.push({color:"wild", value:"draw4", type:"wild"});
+      }
+    }
+
+    // 덱 섞기 (Fisher-Yates)
+    function shuffle(array) {
+      for(let i=array.length-1;i>0;i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    // 호스트가 게임 시작 시: 덱 생성, 섞기, 카드 분배 (각 7장) 및 오픈 카드 설정
+    function startNewGame() {
+      createDeck();
+      deck = shuffle(deck);
+      myHand = deck.splice(0,7);
+      // 상대방 카드도 7장 (호스트만 관리하며 상대에게는 카드 수만 전달)
+      opponentCardCount = 7;
+      let firstCard = deck.shift();
+      // 첫 카드는 와일드가 아니게
+      while(firstCard.type === "wild"){
+        deck.push(firstCard);
+        firstCard = deck.shift();
+      }
+      discardPile = [firstCard];
+      currentTurn = "host"; // 호스트부터 시작
+      gameStarted = true;
+      sendGameState();
+      renderGame();
+    }
+
+    // 게임 상태를 JSON 메시지로 보내기 (호스트 전용)
+    function sendGameState() {
+      if(!isHost) return;
+      const state = {
+        type: "update",
+        publicState: {
+          topCard: discardPile[discardPile.length-1],
+          drawCount: deck.length,
+          opponentCardCount: opponentCardCount,
+          currentTurn: currentTurn
+        }
+      };
+      peer.send(JSON.stringify(state));
+    }
+
+    // 메시지 처리 (호스트와 클라이언트 모두)
+    function handleMessage(msg) {
+      if(msg.type === "update") {
+        // 클라이언트는 호스트가 보낸 업데이트 수신
+        updatePublicState(msg.publicState);
+        renderGame();
+      } else if(msg.type === "move") {
+        // 상대방의 움직임 (호스트인 경우, 클라이언트의 요청)
+        if(isHost) {
+          processOpponentMove(msg.move);
+        }
+      }
+    }
+
+    // 클라이언트용: 공개 상태 업데이트 (내가 볼 수 있는 정보)
+    let publicState = {};
+    function updatePublicState(state) {
+      publicState = state;
+      currentTurn = state.currentTurn;
+    }
+
+    /* ========== UI 렌더링 ========== */
+    // 상대 정보 (카드 수만 표시)
+    function renderOpponentInfo() {
+      const oppDiv = document.getElementById("opponentInfo");
+      oppDiv.innerText = "상대 카드: " + (isHost ? opponentCardCount : publicState.opponentCardCount) + "장";
+    }
+
+    // 내 핸드 렌더링 (겹쳐서 배치)
+    function renderHand() {
+      const container = document.getElementById("playerHand");
+      container.innerHTML = "";
+      const containerWidth = container.clientWidth || 900;
+      const cardWidth = 70;
+      let offset = 0;
+      if(myHand.length > 1) {
+        offset = Math.min(40, (containerWidth - cardWidth) / (myHand.length - 1));
+      }
+      myHand.forEach((card, i) => {
+        const cardDiv = document.createElement("div");
+        cardDiv.className = "card " + card.color;
+        cardDiv.style.left = (i*offset)+"px";
+        cardDiv.innerText = getCardIcon(card);
+        // 내가 차례일 때만 카드 클릭 허용
+        if((isHost && currentTurn==="host") || (!isHost && currentTurn==="client")){
+          cardDiv.onclick = (e)=> playerPlay(e, i);
+        }
+        container.appendChild(cardDiv);
+      });
+    }
+
+    // 중앙 테이블 렌더링 (드로우, 버림 파일)
+    function renderTable() {
+      const drawDiv = document.getElementById("drawPile");
+      const discardDiv = document.getElementById("discardPile");
+      drawDiv.innerHTML = "";
+      discardDiv.innerHTML = "";
+      // 드로우 파일
+      const drawCard = document.createElement("div");
+      drawCard.className = "card";
+      drawCard.style.position = "relative";
+      drawCard.style.cursor = ( (isHost && currentTurn==="host") || (!isHost && currentTurn==="client") ) ? "pointer" : "default";
+      drawCard.innerText = "드로우\n(" + (isHost ? deck.length : publicState.drawCount) + ")";
+      drawCard.onclick = ()=> {
+        if((isHost && currentTurn==="host") || (!isHost && currentTurn==="client")){
+          playerDraw();
+        }
+      };
+      drawDiv.appendChild(drawCard);
+      // 버림 파일 (가장 위의 카드)
+      const topCard = discardPile[discardPile.length-1];
+      const topDiv = document.createElement("div");
+      topDiv.className = "card " + topCard.color;
+      topDiv.style.position = "relative";
+      topDiv.innerText = getCardIcon(topCard);
+      topDiv.classList.add("play-animation");
+      discardDiv.appendChild(topDiv);
+    }
+
+    function renderGame() {
+      renderOpponentInfo();
+      renderHand();
+      renderTable();
+      document.getElementById("message").innerText = ( (isHost && currentTurn==="host") || (!isHost && currentTurn==="client") ) ? "당신의 차례입니다." : "상대의 차례입니다.";
+    }
+
+    // 토스트 메시지 함수
+    function showToast(message) {
+      const container = document.getElementById("toastContainer");
+      const toast = document.createElement("div");
+      toast.className = "toast";
+      toast.innerText = message;
+      container.appendChild(toast);
+      setTimeout(()=> toast.remove(), 3000);
+    }
+
+    /* ========== 게임 플레이 로직 ========== */
+    // 플레이어가 카드를 내면 호출 (호스트와 클라이언트 모두)
+    function playerPlay(e, index) {
+      if( !(((isHost && currentTurn==="host") || (!isHost && currentTurn==="client"))) ) return;
+      const chosenCard = myHand[index];
+      if(isPlayable(chosenCard)) {
+        // 카드 이동 애니메이션
+        animateCardMove(e.currentTarget, ()=>{
+          playCard(chosenCard, isHost ? "host" : "client");
+          myHand.splice(index, 1);
+          cardSound.play();
+          if(isHost){
+            // 호스트 업데이트: 진행 상대 카드 수 변화(예: draw 효과) 등
+            nextTurn();
+            sendGameState();
+            renderGame();
+          } else {
+            // 클라이언트: 자신의 움직임을 호스트에게 전달
+            peer.send(JSON.stringify({type:"move", move:{card: chosenCard}}));
+          }
+        });
+      } else {
+        showToast("이 카드는 낼 수 없습니다!");
+      }
+    }
+
+    // 플레이어가 드로우 버튼 클릭 시 처리
+    function playerDraw() {
+      if(!(((isHost && currentTurn==="host") || (!isHost && currentTurn==="client"))) ) return;
+      if(deck.length === 0) reshuffleDeck();
+      const drawn = deck.shift();
+      if(isHost){
+        myHand.push(drawn);
+        // 만약 드로우 후 낼 카드가 없으면 턴 종료
+        nextTurn();
+        sendGameState();
+        renderGame();
+      } else {
+        peer.send(JSON.stringify({type:"move", move:{draw:true}}));
+      }
+    }
+
+    // 호스트용: 클라이언트의 움직임 처리
+    function processOpponentMove(move) {
+      if(move.draw) {
+        // 상대가 드로우함: 클라이언트의 패 증가
+        opponentCardCount++;
+      } else if(move.card) {
+        // 상대가 카드를 냄: 호스트에서 클라이언트의 패 수 감소
+        if(opponentCardCount>0) opponentCardCount--;
+        // 버림 파일 업데이트
+        discardPile.push(move.card);
+        // 특수 카드 효과 처리 (호스트 측에서 처리)
+        processCardEffect(move.card, "client");
+      }
+      nextTurn();
+      sendGameState();
+      renderGame();
+    }
+
+    // 카드 플레이 시 효과 처리 (호스트가 관리)
+    function playCard(card, player) {
+      // 와일드 카드: 색상 선택
+      if(card.type === "wild") {
+        let chosenColor = prompt("원하는 색상을 입력하세요 (red, yellow, green, blue)").toLowerCase();
+        if(!colors.includes(chosenColor)){
+          chosenColor = colors[Math.floor(Math.random()*4)];
+          showToast("잘못된 색상 선택, 무작위 색상으로 설정합니다.");
+        }
+        card.chosenColor = chosenColor;
+        card.color = chosenColor;
+      }
+      discardPile.push(card);
+      processCardEffect(card, player);
+    }
+
+    // 카드 효과 처리 (skip, reverse, draw2, draw4 등)
+    function processCardEffect(card, player) {
+      if(card.value === "skip" || card.value === "reverse") {
+        // 2인 게임에서는 reverse는 skip과 동일
+        // 턴 건너뛰기 효과: 그냥 턴 넘김
+      } else if(card.value === "draw2") {
+        for(let i=0;i<2;i++){
+          if(deck.length===0) reshuffleDeck();
+          if(player==="host"){
+            // 상대가 받음
+            opponentCardCount++;
+          } else {
+            myHand.push(deck.shift());
+          }
+        }
+      } else if(card.value === "draw4") {
+        for(let i=0;i<4;i++){
+          if(deck.length===0) reshuffleDeck();
+          if(player==="host"){
+            opponentCardCount++;
+          } else {
+            myHand.push(deck.shift());
+          }
+        }
+        // 와일드 드로우4 카드에도 색상 선택 적용 (이미 처리됨)
+      }
+    }
+
+    // 턴 전환
+    function nextTurn() {
+      currentTurn = (currentTurn==="host") ? "client" : "host";
+    }
+
+    // 덱이 비었을 경우 재구성 (버림 파일 제외)
+    function reshuffleDeck() {
+      let top = discardPile.pop();
+      deck = shuffle(discardPile);
+      discardPile = [top];
+    }
+
+    // 카드 이동 애니메이션 (클릭된 카드가 중앙 버림 파일 위치로 이동)
+    function animateCardMove(cardElem, callback) {
+      const startRect = cardElem.getBoundingClientRect();
+      const discardElem = document.getElementById("discardPile");
+      const targetRect = discardElem.getBoundingClientRect();
+      const clone = cardElem.cloneNode(true);
+      clone.style.position = "fixed";
+      clone.style.left = startRect.left + "px";
+      clone.style.top = startRect.top + "px";
+      clone.style.margin = 0;
+      clone.style.zIndex = 1000;
+      document.body.appendChild(clone);
+      const deltaX = targetRect.left + targetRect.width/2 - (startRect.left + startRect.width/2);
+      const deltaY = targetRect.top + targetRect.height/2 - (startRect.top + startRect.height/2);
+      clone.animate([
+        { transform: "translate(0,0)", opacity: 1 },
+        { transform: `translate(${deltaX}px, ${deltaY}px) scale(0.5)`, opacity: 0.5 }
+      ], { duration: 500, easing: "ease-in-out" }).onfinish = () => {
+        clone.remove();
+        callback();
+      };
+    }
+
+    /* ========== 게임 초기화 ========== */
+    function initGame() {
+      // 연결된 후 역할에 따라 게임 초기화 (호스트는 게임을 시작하고, 클라이언트는 호스트의 업데이트를 기다림)
+      gameContainer.style.display = "flex";
+      if(isHost) {
+        startNewGame();
+      }
+    }
+  </script>
+</body>
+</html>
