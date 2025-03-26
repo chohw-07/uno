@@ -2,132 +2,866 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>UNO</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNO 카드 게임</title>
   <!-- SimplePeer 라이브러리 (CDN) -->
   <script src="https://unpkg.com/simple-peer@9.11.1/simplepeer.min.js"></script>
+  <!-- QR 코드 생성 라이브러리 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- 애니메이션 라이브러리 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
   <style>
-    /* 기본 배경 및 텍스트 */
-    body {
+    :root {
+      --primary-color: #e74c3c;
+      --secondary-color: #3498db;
+      --background-color: #0b6623;
+      --card-back-color: #2c3e50;
+      --text-color: #ecf0f1;
+      --menu-bg: linear-gradient(135deg, #8B5A2B, #A0522D);
+      --button-color: #27ae60;
+      --button-hover: #1e8449;
+      --card-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      --toast-bg: rgba(0, 0, 0, 0.85);
+      --red-card: linear-gradient(135deg, #e74c3c, #c0392b);
+      --yellow-card: linear-gradient(135deg, #f1c40f, #f39c12);
+      --green-card: linear-gradient(135deg, #2ecc71, #27ae60);
+      --blue-card: linear-gradient(135deg, #3498db, #2980b9);
+      --wild-card: linear-gradient(135deg, #9b59b6, #8e44ad);
+      --card-border-radius: 12px;
+      --transition-speed: 0.3s;
+      --table-highlight: rgba(255, 255, 255, 0.1);
+    }
+
+    /* 색약자 모드용 변수 (활성화시 대체) */
+    .color-blind-mode {
+      --red-card: linear-gradient(135deg, #e67e22, #d35400);
+      --yellow-card: linear-gradient(135deg, #f1c40f, #f39c12);
+      --green-card: linear-gradient(135deg, #1abc9c, #16a085);
+      --blue-card: linear-gradient(135deg, #3498db, #2980b9);
+    }
+
+    * {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
-      background: radial-gradient(ellipse at center, #0b6623 0%, #004d23 100%);
+    }
+
+    body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: #ecf0f1;
+      background: radial-gradient(ellipse at center, var(--background-color) 0%, #004d23 100%);
+      color: var(--text-color);
+      min-height: 100vh;
       overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
-    h1 { text-align: center; margin: 20px 0; }
-    /* 메인 메뉴: 나무 테이블 느낌 */
-    #menuScreen {
-      background: linear-gradient(135deg, #8B5A2B, #A0522D);
-      padding: 40px;
-      border: 5px solid #5D3A1A;
-      border-radius: 10px;
-      max-width: 500px;
-      margin: 60px auto;
-      box-shadow: 0 0 20px rgba(0,0,0,0.6);
+
+    header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      background-color: rgba(0, 0, 0, 0.3);
+    }
+
+    .game-title {
+      font-size: 2rem;
+      font-weight: bold;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
       text-align: center;
+      margin: 0;
+      flex-grow: 1;
     }
-    #menuScreen button {
-      padding: 10px 20px;
-      font-size: 18px;
+
+    .settings-button {
+      background: transparent;
       border: none;
-      border-radius: 5px;
-      background: #27ae60;
-      color: #fff;
+      color: var(--text-color);
+      font-size: 1.5rem;
       cursor: pointer;
-      margin: 5px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s;
     }
-    #menuScreen button:hover { background: #1e8449; }
+
+    .settings-button:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* 메인 메뉴 스타일 */
+    #menuScreen {
+      background: var(--menu-bg);
+      padding: 2rem;
+      border-radius: 16px;
+      max-width: 600px;
+      width: 90%;
+      margin: 5vh auto;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+      text-align: center;
+      transform: translateY(0);
+      opacity: 1;
+      transition: transform 0.5s, opacity 0.5s;
+    }
+
+    #menuScreen.hidden {
+      transform: translateY(-20px);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .menu-title {
+      font-size: 2.5rem;
+      margin-bottom: 1.5rem;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .menu-description {
+      font-size: 1.1rem;
+      margin-bottom: 2rem;
+      line-height: 1.5;
+    }
+
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .menu-button {
+      padding: 1rem 1.5rem;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      background: var(--button-color);
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .menu-button:hover {
+      background: var(--button-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .menu-button:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .menu-button i {
+      font-size: 1.4rem;
+    }
+
+    .menu-button.secondary {
+      background: #7f8c8d;
+    }
+
+    .menu-button.secondary:hover {
+      background: #6c7a7d;
+    }
+
+    /* 모드 선택 라디오 버튼 */
+    .game-modes {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .mode-card {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 1.5rem;
+      border-radius: 10px;
+      width: 180px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s;
+      border: 2px solid transparent;
+    }
+
+    .mode-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .mode-card.selected {
+      border-color: var(--primary-color);
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    .mode-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      color: var(--text-color);
+    }
+
+    .mode-title {
+      font-size: 1.2rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+
+    .mode-desc {
+      font-size: 0.9rem;
+      color: #ccc;
+    }
+
+    .difficulty-select {
+      display: none;
+      margin-top: 1rem;
+    }
+
+    .difficulty-select.visible {
+      display: block;
+      animation: fadeIn 0.3s;
+    }
+
+    .difficulty-options {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .difficulty-btn {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-color);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .difficulty-btn.selected {
+      background: var(--secondary-color);
+    }
+
     /* 시그널링 패널 */
     #signalPanel {
       display: none;
       max-width: 800px;
-      margin: 20px auto;
-      padding: 20px;
-      background: rgba(0,0,0,0.5);
-      border-radius: 8px;
+      width: 90%;
+      margin: 2rem auto;
+      padding: 2rem;
+      background: rgba(0, 0, 0, 0.6);
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
       text-align: center;
     }
-    #signalPanel textarea {
-      width: 90%;
-      height: 100px;
-      margin: 10px 0;
+
+    #signalInstructions {
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      line-height: 1.5;
     }
+
+    .signal-tabs {
+      display: flex;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .signal-tab {
+      padding: 0.8rem 1.5rem;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .signal-tab.active {
+      border-bottom-color: var(--primary-color);
+      font-weight: bold;
+    }
+
+    .signal-content {
+      display: none;
+    }
+
+    .signal-content.active {
+      display: block;
+      animation: fadeIn 0.3s;
+    }
+
+    #signalData {
+      width: 100%;
+      height: 120px;
+      margin: 1rem 0;
+      padding: 0.8rem;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: var(--text-color);
+      resize: none;
+      font-family: monospace;
+    }
+
+    #qrContainer {
+      max-width: 200px;
+      margin: 1rem auto;
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+    }
+
+    .copy-button {
+      padding: 0.5rem 1rem;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 4px;
+      color: var(--text-color);
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-right: 0.5rem;
+    }
+
+    .copy-button:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .connection-status {
+      margin-top: 1rem;
+      padding: 0.8rem;
+      border-radius: 8px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .status-connecting {
+      background: rgba(241, 196, 15, 0.3);
+      color: #f1c40f;
+    }
+
+    .status-connected {
+      background: rgba(46, 204, 113, 0.3);
+      color: #2ecc71;
+    }
+
+    .status-error {
+      background: rgba(231, 76, 60, 0.3);
+      color: #e74c3c;
+    }
+
+    .loader {
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: var(--text-color);
+      animation: spin 1s infinite linear;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
     /* 게임 컨테이너 */
     #gameContainer {
       display: none;
-      max-width: 1000px;
-      height: 100vh;
+      max-width: 100%;
+      width: 100%;
+      height: calc(100vh - 70px);
       box-sizing: border-box;
       margin: 0 auto;
-      padding: 20px;
+      padding: 1rem;
+      position: relative;
+    }
+
+    /* 게임 화면 레이아웃 */
+    .game-layout {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      height: 100%;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* 상대방 영역 */
+    .opponent-area {
+      padding: 1rem;
+      text-align: center;
+      position: relative;
+    }
+
+    #opponentInfo {
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .opponent-status {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: #e74c3c;
+      display: inline-block;
+      margin-right: 0.5rem;
+    }
+
+    .opponent-status.active {
+      background-color: #2ecc71;
+    }
+
+    .opponent-status.thinking {
+      animation: blink 1.5s infinite;
+    }
+
+    .opponent-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background-color: #34495e;
+      margin: 0 auto 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      overflow: hidden;
+    }
+
+    .opponent-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .opponent-cards {
+      display: flex;
+      justify-content: center;
+      min-height: 60px;
+      margin-top: 0.5rem;
+    }
+
+    .opponent-card {
+      width: 40px;
+      height: 60px;
+      background: var(--card-back-color);
+      border-radius: var(--card-border-radius);
+      margin: 0 -15px;
+      box-shadow: var(--card-shadow);
+      transition: transform 0.3s;
+      position: relative;
+      transform-origin: center bottom;
+    }
+
+    .opponent-card:nth-child(even) {
+      transform: rotate(-2deg);
+    }
+
+    .opponent-card:nth-child(odd) {
+      transform: rotate(2deg);
+    }
+
+    .opponent-card:hover {
+      transform: translateY(-5px);
+      z-index: 5;
+    }
+
+    /* 테이블 영역 */
+    .table-area {
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-    }
-    /* 핸드 영역: 상대는 카드 수만 표시, 내 패는 겹침 효과 */
-    .hand {
+      justify-content: center;
+      align-items: center;
       position: relative;
-      height: 140px;
-      margin: 0 auto;
-      width: 100%;
-      max-width: 900px;
+      padding: 1rem;
     }
-    #opponentInfo {
-      text-align: center;
-      margin: 10px;
-      font-size: 18px;
+
+    .table-felt {
+      position: absolute;
+      top: 20%;
+      left: 10%;
+      right: 10%;
+      bottom: 20%;
+      background-color: var(--table-highlight);
+      border-radius: 50%;
+      z-index: -1;
     }
-    /* 중앙 테이블: 드로우/버림 파일 */
+
     #table {
       display: flex;
       justify-content: center;
       align-items: center;
-      gap: 50px;
+      gap: 2rem;
       position: relative;
-      margin: 20px 0;
+      margin: 1rem 0;
+      width: 100%;
     }
+
+    .pile-wrapper {
+      position: relative;
+      perspective: 1000px;
+    }
+
+    .pile-label {
+      font-size: 0.9rem;
+      margin-bottom: 0.5rem;
+      text-align: center;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
     #drawPile, #discardPile {
+      width: 80px;
+      height: 120px;
       position: relative;
-      width: 70px;
-      height: 100px;
+      transition: all 0.3s;
     }
-    /* 카드 스타일 (UNO 카드 느낌) */
-    .card {
-      width: 70px;
-      height: 100px;
-      border-radius: 8px;
+
+    #drawPile:hover {
+      transform: scale(1.05);
+    }
+
+    .pile-count {
       position: absolute;
-      box-shadow: 2px 2px 6px rgba(0,0,0,0.5);
-      background: linear-gradient(to bottom, #fff, #ddd);
-      border: 2px solid #bbb;
+      bottom: -20px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+
+    /* 색상 선택기 */
+    #colorSelector {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.8);
+      padding: 1rem;
+      border-radius: 12px;
+      z-index: 100;
+      animation: fadeIn 0.3s;
+    }
+
+    .color-title {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    .color-options {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+    }
+
+    .color-option {
+      width: 70px;
+      height: 70px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.3s;
+    }
+
+    .color-option:hover {
+      transform: scale(1.1);
+    }
+
+    .color-red {
+      background: var(--red-card);
+    }
+
+    .color-yellow {
+      background: var(--yellow-card);
+    }
+
+    .color-green {
+      background: var(--green-card);
+    }
+
+    .color-blue {
+      background: var(--blue-card);
+    }
+
+    /* 현재 턴 표시 */
+    #currentTurnDisplay {
+      padding: 0.5rem 1rem;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 20px;
+      font-weight: bold;
+      text-align: center;
+      margin: 1rem 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .turn-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: var(--primary-color);
+    }
+
+    .turn-indicator.active {
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.3);
+        opacity: 0.7;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    /* 메시지 영역 */
+    #message {
+      font-size: 1.2rem;
+      padding: 0.8rem 1.5rem;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 8px;
+      text-align: center;
+      margin: 1rem 0;
+      transition: all 0.3s;
+    }
+
+    #message.highlight {
+      background: rgba(231, 76, 60, 0.3);
+      transform: scale(1.05);
+    }
+
+    /* 액션 버튼 */
+    .game-actions {
       display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+
+    .action-button {
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-color);
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .action-button:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .action-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .action-button.uno-button {
+      background: var(--primary-color);
+    }
+
+    .action-button.uno-button:hover {
+      background: #c0392b;
+    }
+
+    /* 플레이어 핸드 영역 */
+    .player-area {
+      padding: 1rem;
+      position: relative;
+    }
+
+    #playerHand {
+      position: relative;
+      min-height: 150px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: center;
+      perspective: 1000px;
+    }
+
+    .hand-wrapper {
+      position: relative;
+      min-height: 150px;
+      max-width: 90%;
+      overflow-x: auto;
+      margin: 0 auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+      padding: 0.5rem;
+    }
+
+    .hand-wrapper::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* 카드 디자인 */
+    .card {
+      width: 80px;
+      height: 120px;
+      border-radius: var(--card-border-radius);
+      position: absolute;
+      box-shadow: var(--card-shadow);
+      background: linear-gradient(to bottom, #fff, #eee);
+      border: 2px solid rgba(0, 0, 0, 0.2);
+      display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       font-weight: bold;
-      font-size: 24px;
+      font-size: 2rem;
       cursor: pointer;
       user-select: none;
-      transition: transform 0.3s ease;
+      transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+      transform-origin: center bottom;
+      color: white;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     }
-    .card:hover { transform: translateY(-8px); }
-    /* 색상별 카드 */
-    .red { border-color: #e74c3c; background: linear-gradient(to bottom, #ffcccc, #f1a9a0); }
-    .yellow { border-color: #f1c40f; background: linear-gradient(to bottom, #ffffcc, #f9e79f); color: #000; }
-    .green { border-color: #27ae60; background: linear-gradient(to bottom, #d4efdf, #7dcea0); }
-    .blue { border-color: #3498db; background: linear-gradient(to bottom, #d6eaf8, #85c1e9); }
-    .wild { border-color: #8e44ad; background: linear-gradient(to bottom, #e8daef, #d2b4de); }
-    /* 드로우/버림 파일 카드: 고정 위치 */
-    #drawPile .card, #discardPile .card { position: relative; left: 0; top: 0; cursor: default; }
-    /* 카드 이동 애니메이션 */
+
+    .card-player {
+      position: relative;
+      margin: 0 -15px;
+      display: inline-block;
+      transition: transform 0.3s, margin 0.3s;
+    }
+
+    .card-player:hover {
+      transform: translateY(-20px) scale(1.1);
+      z-index: 10;
+      margin: 0 5px;
+    }
+
+    .card.can-play {
+      box-shadow: 0 0 0 3px #f1c40f, var(--card-shadow);
+      animation: canPlay 1.5s infinite;
+    }
+
+    @keyframes canPlay {
+      0%, 100% {
+        box-shadow: 0 0 0 2px #f1c40f, var(--card-shadow);
+      }
+      50% {
+        box-shadow: 0 0 10px 2px #f1c40f, var(--card-shadow);
+      }
+    }
+
+    /* 카드 색상 */
+    .card.red {
+      background: var(--red-card);
+    }
+
+    .card.yellow {
+      background: var(--yellow-card);
+    }
+
+    .card.green {
+      background: var(--green-card);
+    }
+
+    .card.blue {
+      background: var(--blue-card);
+    }
+
+    .card.wild {
+      background: var(--wild-card);
+    }
+
+    /* 카드 내부 디자인 */
+    .card-content {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+    }
+
+    .card-corners {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      font-size: 1rem;
+    }
+
+    .card-corners-br {
+      position: absolute;
+      bottom: 5px;
+      right: 5px;
+      font-size: 1rem;
+      transform: rotate(180deg);
+    }
+
+    .card-back {
+      background: var(--card-back-color);
+      border: 2px solid rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+
+    .card-back:after {
+      content: "UNO";
+      font-size: 1.5rem;
+      transform: rotate(-45deg);
+      position: absolute;
+      background: var(--primary-color);
+      padding: 0.3rem 1.5rem;
+    }
+
+    /* 플레이 애니메이션 */
     .play-animation {
       animation: playCardAnim 0.5s ease-out;
     }
+
     @keyframes playCardAnim {
-      0% { transform: scale(1) rotate(0deg); opacity: 0; }
-      50% { transform: scale(1.2) rotate(10deg); opacity: 1; }
-      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+      0% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: 0.5;
+      }
+      50% {
+        transform: translate(0, -30px) rotate(10deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: 1;
+      }
     }
+
     /* 토스트 메시지 */
     #toastContainer {
       position: fixed;
@@ -135,456 +869,2172 @@
       right: 20px;
       z-index: 9999;
     }
+
     .toast {
-      background: rgba(0, 0, 0, 0.7);
-      padding: 10px 20px;
-      margin-bottom: 10px;
-      border-radius: 5px;
-      color: #fff;
-      font-size: 16px;
+      background: var(--toast-bg);
+      padding: 1rem 1.5rem;
+      margin-bottom: 0.8rem;
+      border-radius: 8px;
+      color: var(--text-color);
+      font-size: 1rem;
       animation: fadeInOut 3s forwards;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      max-width: 320px;
     }
+
+    .toast-icon {
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+
+    .toast-info {
+      color: #3498db;
+    }
+
+    .toast-success {
+      color: #2ecc71;
+    }
+
+    .toast-warning {
+      color: #f1c40f;
+    }
+
+    .toast-error {
+      color: #e74c3c;
+    }
+
     @keyframes fadeInOut {
-      0% { opacity: 0; transform: translateY(-20px); }
-      10% { opacity: 1; transform: translateY(0); }
-      90% { opacity: 1; transform: translateY(0); }
-      100% { opacity: 0; transform: translateY(-20px); }
+      0% {
+        opacity: 0;
+        transform: translateX(50px);
+      }
+      10% {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      90% {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      100% {
+        opacity: 0;
+        transform: translateX(50px);
+      }
     }
-    /* 중앙 메시지 */
-    #message {
-      font-size: 22px;
-      margin: 10px auto;
+
+    /* 결과 모달 */
+    #gameResultModal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 0.3s;
+    }
+
+    .modal-content {
+      background: var(--menu-bg);
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 500px;
+      width: 90%;
       text-align: center;
+      animation: scaleIn 0.3s;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .result-title {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .win-message {
+      color: #f1c40f;
+      text-shadow: 0 0 10px rgba(241, 196, 15, 0.5);
+    }
+
+    .lose-message {
+      color: #e74c3c;
+    }
+
+    .result-stats {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1.5rem 0;
+      text-align: left;
+    }
+
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .stat-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .confetti {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: #f1c40f;
+      opacity: 0.8;
+    }
+
+    /* 설정 모달 */
+    #settingsModal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .settings-content {
+      background: var(--menu-bg);
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 500px;
+      width: 90%;
+      animation: scaleIn 0.3s;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .settings-title {
+      font-size: 1.8rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .settings-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .settings-label {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 30px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 30px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 22px;
+      width: 22px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: var(--button-color);
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(30px);
+    }
+
+    .volume-control {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .volume-slider {
+      flex-grow: 1;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      appearance: none;
+    }
+
+    .volume-slider::-webkit-slider-thumb {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--text-color);
+      cursor: pointer;
+    }
+
+    .modal-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    /* 반응형 디자인 */
+    @media (max-width: 768px) {
+      .game-title {
+        font-size: 1.5rem;
+      }
+
+      .menu-title {
+        font-size: 2rem;
+      }
+
+      .game-modes {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .mode-card {
+        width: 100%;
+        max-width: 280px;
+      }
+
+      #table {
+        gap: 1rem;
+      }
+
+      .card {
+        width: 70px;
+        height: 105px;
+        font-size: 1.8rem;
+      }
+
+      #drawPile, #discardPile {
+        width: 70px;
+        height: 105px;
+      }
+
+      .opponent-card {
+        width: 35px;
+        height: 53px;
+        margin: 0 -12px;
+      }
+
+      .card-player {
+        margin: 0 -25px;
+      }
+
+      .card-player:hover {
+        margin: 0 -10px;
+      }
+
+      .card-corners, .card-corners-br {
+        font-size: 0.8rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .card {
+        width: 60px;
+        height: 90px;
+        font-size: 1.5rem;
+      }
+
+      #drawPile, #discardPile {
+        width: 60px;
+        height: 90px;
+      }
+
+      .opponent-card {
+        width: 30px;
+        height: 45px;
+        margin: 0 -10px;
+      }
+
+      .game-actions {
+        flex-wrap: wrap;
+      }
+
+      .card-player {
+        margin: 0 -28px;
+      }
+
+      .card-player:hover {
+        margin: 0 -15px;
+      }
+    }
+
+    /* 애니메이션 */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes scaleIn {
+      from {
+        transform: scale(0.9);
+        opacity: 0;
+      }
+      to {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes blink {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    /* 아이콘 폰트 (간단한 대용) */
+    .icon {
+      font-family: Arial, sans-serif;
+      font-style: normal;
+      font-weight: normal;
     }
   </style>
 </head>
 <body>
-  <h1>우노 게임</h1>
-  <!-- 초기 메뉴 (역할 선택) -->
+  <header>
+    <button id="settingsBtn" class="settings-button">⚙️</button>
+    <h1 class="game-title">UNO 카드 게임</h1>
+    <div style="width: 40px;"></div> <!-- 균형을 위한 빈 공간 -->
+  </header>
+
+  <!-- 초기 메뉴 (게임 모드 선택) -->
   <div id="menuScreen">
-    <p>당신의 역할을 선택하세요.</p>
-    <button id="hostBtn">호스트 (딜러)</button>
-    <button id="clientBtn">클라이언트</button>
+    <h2 class="menu-title">UNO 카드 게임</h2>
+    <p class="menu-description">친구와 함께 플레이하거나 AI와 대결하세요!</p>
+    
+    <div class="game-modes">
+      <div class="mode-card" data-mode="ai">
+        <div class="mode-icon">🤖</div>
+        <div class="mode-title">AI 대전</div>
+        <div class="mode-desc">인공지능 상대와 1:1 대결</div>
+      </div>
+      <div class="mode-card" data-mode="p2p">
+        <div class="mode-icon">👥</div>
+        <div class="mode-title">친구와 플레이</div>
+        <div class="mode-desc">P2P 연결로 원격 플레이</div>
+      </div>
+    </div>
+
+    <div id="aiDifficultySelect" class="difficulty-select">
+      <div class="settings-label">난이도 선택:</div>
+      <div class="difficulty-options">
+        <button class="difficulty-btn" data-difficulty="easy">쉬움</button>
+        <button class="difficulty-btn selected" data-difficulty="medium">보통</button>
+        <button class="difficulty-btn" data-difficulty="hard">어려움</button>
+      </div>
+    </div>
+
+    <div id="p2pRoleSelect" class="difficulty-select">
+      <div class="settings-label">역할 선택:</div>
+      <div class="difficulty-options">
+        <button class="difficulty-btn selected" data-role="host">방 만들기</button>
+        <button class="difficulty-btn" data-role="client">방 참가하기</button>
+      </div>
+    </div>
+
+    <div class="button-group">
+      <button id="startGameBtn" class="menu-button">
+        <span class="icon">▶️</span> 게임 시작
+      </button>
+      <button id="rulesBtn" class="menu-button secondary">
+        <span class="icon">📋</span> 게임 규칙
+      </button>
+    </div>
   </div>
-  <!-- 시그널링 패널 (수동 시그널링) -->
+
+  <!-- 시그널링 패널 (P2P 연결용) -->
   <div id="signalPanel">
     <div id="signalInstructions"></div>
-    <textarea id="signalData" placeholder="시그널 데이터를 여기에 복사하세요"></textarea>
-    <br>
-    <button id="sendSignalBtn">전송</button>
+    
+    <div class="signal-tabs">
+      <div class="signal-tab active" data-tab="text">텍스트 코드</div>
+      <div class="signal-tab" data-tab="qr">QR 코드</div>
+    </div>
+    
+    <div class="signal-content active" data-content="text">
+      <textarea id="signalData" placeholder="상대방의 연결 코드를 붙여넣으세요"></textarea>
+      <button id="copySignalBtn" class="copy-button">복사하기</button>
+      <button id="sendSignalBtn" class="menu-button">전송</button>
+    </div>
+    
+    <div class="signal-content" data-content="qr">
+      <div id="qrContainer"></div>
+      <p>QR 코드를 상대방에게 보여주세요</p>
+    </div>
+    
+    <div id="connectionStatus" class="connection-status status-connecting">
+      <div class="loader"></div> 연결 대기 중...
+    </div>
+    
+    <button id="cancelConnectionBtn" class="menu-button secondary">연결 취소</button>
   </div>
+
   <!-- 게임 컨테이너 -->
   <div id="gameContainer">
-    <div id="opponentInfo"></div>
-    <div id="table">
-      <div id="drawPile"></div>
-      <div id="discardPile"></div>
+    <div class="game-layout">
+      <!-- 상대방 영역 -->
+      <div class="opponent-area">
+        <div class="opponent-avatar">🤖</div>
+        <div id="opponentInfo">상대 카드: 7장</div>
+        <div class="opponent-cards" id="opponentCards"></div>
+      </div>
+      
+      <!-- 테이블 영역 -->
+      <div class="table-area">
+        <div class="table-felt"></div>
+        
+        <div id="currentTurnDisplay">
+          <span class="turn-indicator"></span>
+          <span id="turnText">상대 차례</span>
+        </div>
+        
+        <div id="table">
+          <div class="pile-wrapper">
+            <div class="pile-label">드로우 파일</div>
+            <div id="drawPile"></div>
+            <div class="pile-count" id="deckCount">52장</div>
+          </div>
+          <div class="pile-wrapper">
+            <div class="pile-label">버림 파일</div>
+            <div id="discardPile"></div>
+          </div>
+        </div>
+        
+        <div id="message">게임을 시작합니다...</div>
+        
+        <div class="game-actions">
+          <button id="drawCardBtn" class="action-button">
+            <span class="icon">🃏</span> 카드 뽑기
+          </button>
+          <button id="unoBtn" class="action-button uno-button" disabled>
+            <span class="icon">🔊</span> UNO!
+          </button>
+          <button id="passBtn" class="action-button" disabled>
+            <span class="icon">⏭️</span> 턴 넘기기
+          </button>
+        </div>
+      </div>
+      
+      <!-- 플레이어 영역 -->
+      <div class="player-area">
+        <div class="hand-wrapper">
+          <div id="playerHand"></div>
+        </div>
+      </div>
     </div>
-    <div id="message"></div>
-    <div id="playerHand" class="hand"></div>
+    
+    <!-- 색상 선택기 -->
+    <div id="colorSelector">
+      <div class="color-title">색상을 선택하세요</div>
+      <div class="color-options">
+        <div class="color-option color-red" data-color="red"></div>
+        <div class="color-option color-yellow" data-color="yellow"></div>
+        <div class="color-option color-green" data-color="green"></div>
+        <div class="color-option color-blue" data-color="blue"></div>
+      </div>
+    </div>
   </div>
+
+  <!-- 게임 결과 모달 -->
+  <div id="gameResultModal">
+    <div class="modal-content">
+      <h2 class="result-title win-message">승리했습니다!</h2>
+      <p>축하합니다! 상대보다 먼저 모든 카드를 내셨습니다.</p>
+      
+      <div class="result-stats">
+        <div class="stat-item">
+          <span>게임 시간:</span>
+          <span id="gameTime">3분 20초</span>
+        </div>
+        <div class="stat-item">
+          <span>사용한 카드:</span>
+          <span id="cardsPlayed">15장</span>
+        </div>
+        <div class="stat-item">
+          <span>뽑은 카드:</span>
+          <span id="cardsDrawn">7장</span>
+        </div>
+      </div>
+      
+      <div class="button-group">
+        <button id="playAgainBtn" class="menu-button">
+          <span class="icon">🔄</span> 다시 플레이
+        </button>
+        <button id="backToMenuBtn" class="menu-button secondary">
+          <span class="icon">🏠</span> 메인 메뉴
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 설정 모달 -->
+  <div id="settingsModal">
+    <div class="settings-content">
+      <h2 class="settings-title">게임 설정</h2>
+      
+      <div class="settings-group">
+        <div class="toggle-container">
+          <span class="settings-label">효과음</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="soundToggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        
+        <div class="toggle-container">
+          <span class="settings-label">배경 음악</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="musicToggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        
+        <div class="toggle-container">
+          <span class="settings-label">색약자 모드</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="colorBlindToggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        
+        <div class="volume-control">
+          <span class="settings-label">볼륨</span>
+          <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="70">
+          <span id="volumeValue">70%</span>
+        </div>
+      </div>
+      
+      <div class="modal-buttons">
+        <button id="closeSettingsBtn" class="menu-button">
+          <span class="icon">✓</span> 적용
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- 토스트 메시지 컨테이너 -->
   <div id="toastContainer"></div>
-  
+
   <script>
-    /* ========== P2P 연결 및 시그널링 관련 ========= */
+    /* ========== 게임 설정 및 상태 변수 ========== */
+    // 게임 모드 및 설정
+    let gameMode = 'ai'; // 'ai' 또는 'p2p'
+    let aiDifficulty = 'medium'; // 'easy', 'medium', 'hard'
+    let p2pRole = 'host'; // 'host' 또는 'client'
+    let colorBlindMode = false;
+    
+    // 게임 상태 변수
+    let deck = [];
+    let discardPile = [];
+    let myHand = [];
+    let opponentHand = []; // AI 모드에서만 사용
+    let opponentCardCount = 0;
+    let currentTurn = 'player'; // 'player' 또는 'opponent'
+    let currentColor = '';
+    let currentValue = '';
+    let gameStarted = false;
+    let lastCardDrawn = false;
+    let canCallUno = false;
+    let unoWasCalled = false;
+    let gameEndTime = null;
+    let cardsPlayedCount = 0;
+    let cardsDrawnCount = 0;
+    
+    // 게임 타이머
+    let gameTimer = null;
+    let gameStartTime = null;
+    let gameDuration = 0;
+    
+    // P2P 연결 관련
     let peer = null;
-    let isHost = false; // 호스트 여부
     let connectionEstablished = false;
-    const menuScreen = document.getElementById("menuScreen");
-    const signalPanel = document.getElementById("signalPanel");
-    const signalInstructions = document.getElementById("signalInstructions");
-    const signalData = document.getElementById("signalData");
-    const sendSignalBtn = document.getElementById("sendSignalBtn");
-    const gameContainer = document.getElementById("gameContainer");
-
-    document.getElementById("hostBtn").addEventListener("click", () => {
-      isHost = true;
-      startPeer();
-      menuScreen.style.display = "none";
-      signalPanel.style.display = "block";
-      signalInstructions.innerText = "호스트: 생성된 offer 데이터를 복사해서 상대에게 전달하세요.";
+    let reconnectAttempts = 0;
+    const MAX_RECONNECT_ATTEMPTS = 3;
+    
+    // 설정
+    let soundEnabled = true;
+    let musicEnabled = false;
+    let volumeLevel = 70;
+    
+    // DOM 요소 참조
+    const menuScreen = document.getElementById('menuScreen');
+    const signalPanel = document.getElementById('signalPanel');
+    const gameContainer = document.getElementById('gameContainer');
+    const settingsModal = document.getElementById('settingsModal');
+    const gameResultModal = document.getElementById('gameResultModal');
+    const colorSelector = document.getElementById('colorSelector');
+    
+    // 사운드 효과 (데이터 URI)
+    const sounds = {
+      cardPlay: new Audio("data:audio/wav;base64,UklGRjQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRAAAACAgICAgICAgICAgICAgICAgICAgICA"),
+      cardDraw: new Audio("data:audio/wav;base64,UklGRjQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRAAAACAgICAgICAgICAgICAgICAgICAgICA"),
+      uno: new Audio("data:audio/wav;base64,UklGRjQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRAAAACAgICAgICAgICAgICAgICAgICAgICA"),
+      win: new Audio("data:audio/wav;base64,UklGRjQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRAAAACAgICAgICAgICAgICAgICAgICAgICA"),
+      lose: new Audio("data:audio/wav;base64,UklGRjQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRAAAACAgICAgICAgICAgICAgICAgICAgICA"),
+      warning: new Audio("data:audio/wav;base64,UklGRjQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRAAAACAgICAgICAgICAgICAgICAgICAgICA")
+    };
+    
+    // 배경 음악
+    const bgMusic = new Audio("data:audio/wav;base64,UklGRjQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRAAAACAgICAgICAgICAgICAgICAgICAgICA");
+    bgMusic.loop = true;
+    
+    // 모든 사운드 객체 볼륨 설정 함수
+    function updateVolume() {
+      const volume = volumeLevel / 100;
+      for (const sound in sounds) {
+        sounds[sound].volume = volume;
+      }
+      bgMusic.volume = volume * 0.7; // 배경 음악은 약간 더 작게
+    }
+    
+    // 사운드 재생 함수
+    function playSound(sound) {
+      if (soundEnabled) {
+        sounds[sound].currentTime = 0;
+        sounds[sound].play().catch(e => console.log('Sound play error:', e));
+      }
+    }
+    
+    /* ========== 색상, 카드 타입 데이터 ========== */
+    const colors = ["red", "yellow", "green", "blue"];
+    const numbers = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
+    const specialTypes = ["skip", "reverse", "draw2"];
+    const wildTypes = ["wild", "draw4"];
+    
+    // 카드 아이콘 (숫자는 그대로, 특수/와일드 카드에 아이콘 적용)
+    function getCardIcon(card) {
+      if (card.type === "number") return card.value;
+      if (card.type === "special") {
+        if (card.value === "skip") return "🚫";
+        if (card.value === "reverse") return "🔄";
+        if (card.value === "draw2") return "+2";
+      }
+      if (card.type === "wild") {
+        if (card.value === "wild") return "★";
+        if (card.value === "draw4") return "+4";
+      }
+      return card.value;
+    }
+    
+    /* ========== 이벤트 리스너 설정 ========== */
+    document.addEventListener('DOMContentLoaded', function() {
+      // 메인 메뉴 버튼 이벤트
+      setupModeSelection();
+      
+      document.getElementById('startGameBtn').addEventListener('click', () => {
+        if (gameMode === 'ai') {
+          startAIGame();
+        } else {
+          setupP2PConnection();
+        }
+      });
+      
+      document.getElementById('rulesBtn').addEventListener('click', showRules);
+      document.getElementById('settingsBtn').addEventListener('click', toggleSettingsModal);
+      document.getElementById('closeSettingsBtn').addEventListener('click', saveSettings);
+      
+      // 게임 내 버튼 이벤트
+      document.getElementById('drawCardBtn').addEventListener('click', playerDrawCard);
+      document.getElementById('unoBtn').addEventListener('click', callUno);
+      document.getElementById('passBtn').addEventListener('click', passTurn);
+      
+      // 결과 모달 버튼 이벤트
+      document.getElementById('playAgainBtn').addEventListener('click', restartGame);
+      document.getElementById('backToMenuBtn').addEventListener('click', backToMenu);
+      
+      // P2P 연결 이벤트
+      document.getElementById('sendSignalBtn').addEventListener('click', sendSignalData);
+      document.getElementById('copySignalBtn').addEventListener('click', copySignalData);
+      document.getElementById('cancelConnectionBtn').addEventListener('click', cancelConnection);
+      
+      // 시그널링 탭 이벤트
+      setupSignalTabs();
+      
+      // 색상 선택기 이벤트
+      setupColorSelector();
+      
+      // 설정 모달 이벤트
+      setupSettingsControls();
+      
+      // 볼륨 초기화
+      updateVolume();
     });
-
-    document.getElementById("clientBtn").addEventListener("click", () => {
-      isHost = false;
-      startPeer();
-      menuScreen.style.display = "none";
-      signalPanel.style.display = "block";
-      signalInstructions.innerText = "클라이언트: 호스트의 offer 데이터를 아래에 붙여넣고 '전송'을 누르세요.";
-    });
-
-    function startPeer() {
+    
+    /* ========== 메인 메뉴 설정 ========== */
+    function setupModeSelection() {
+      const modeCards = document.querySelectorAll('.mode-card');
+      
+      modeCards.forEach(card => {
+        card.addEventListener('click', () => {
+          // 선택 효과 추가
+          modeCards.forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          
+          gameMode = card.dataset.mode;
+          
+          // 해당 모드의 추가 옵션 표시
+          document.getElementById('aiDifficultySelect').classList.toggle('visible', gameMode === 'ai');
+          document.getElementById('p2pRoleSelect').classList.toggle('visible', gameMode === 'p2p');
+        });
+      });
+      
+      // 난이도 버튼
+      const difficultyBtns = document.querySelectorAll('.difficulty-btn[data-difficulty]');
+      difficultyBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          difficultyBtns.forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          aiDifficulty = btn.dataset.difficulty;
+        });
+      });
+      
+      // 역할 버튼
+      const roleBtns = document.querySelectorAll('.difficulty-btn[data-role]');
+      roleBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          roleBtns.forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          p2pRole = btn.dataset.role;
+        });
+      });
+    }
+    
+    function setupSignalTabs() {
+      const tabs = document.querySelectorAll('.signal-tab');
+      
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          // 탭 활성화
+          tabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          
+          // 컨텐츠 활성화
+          const contentId = tab.dataset.tab;
+          const contents = document.querySelectorAll('.signal-content');
+          contents.forEach(c => c.classList.remove('active'));
+          document.querySelector(`.signal-content[data-content="${contentId}"]`).classList.add('active');
+          
+          // QR 코드 탭이면 QR 코드 생성
+          if (contentId === 'qr' && document.getElementById('signalData').value) {
+            generateQRCode(document.getElementById('signalData').value);
+          }
+        });
+      });
+    }
+    
+    function setupColorSelector() {
+      const colorOptions = document.querySelectorAll('.color-option');
+      
+      colorOptions.forEach(option => {
+        option.addEventListener('click', () => {
+          const color = option.dataset.color;
+          selectWildColor(color);
+        });
+      });
+    }
+    
+    function setupSettingsControls() {
+      // 볼륨 슬라이더
+      const volumeSlider = document.getElementById('volumeSlider');
+      const volumeValue = document.getElementById('volumeValue');
+      
+      volumeSlider.addEventListener('input', () => {
+        volumeLevel = volumeSlider.value;
+        volumeValue.textContent = `${volumeLevel}%`;
+        updateVolume();
+      });
+      
+      // 토글 버튼
+      document.getElementById('soundToggle').addEventListener('change', function() {
+        soundEnabled = this.checked;
+      });
+      
+      document.getElementById('musicToggle').addEventListener('change', function() {
+        musicEnabled = this.checked;
+        if (musicEnabled) {
+          bgMusic.play().catch(e => console.log('Music play error:', e));
+        } else {
+          bgMusic.pause();
+        }
+      });
+      
+      document.getElementById('colorBlindToggle').addEventListener('change', function() {
+        colorBlindMode = this.checked;
+        document.body.classList.toggle('color-blind-mode', colorBlindMode);
+      });
+    }
+    
+    /* ========== 게임 시작 및 초기화 ========== */
+    function startAIGame() {
+      menuScreen.classList.add('hidden');
+      gameContainer.style.display = 'block';
+      
+      // AI 상대 아바타 변경
+      document.querySelector('.opponent-avatar').innerHTML = '🤖';
+      
+      initGame();
+      showToast('info', 'AI 모드로 게임을 시작합니다. 난이도: ' + aiDifficulty);
+      
+      // 게임 타이머 시작
+      startGameTimer();
+    }
+    
+    function setupP2PConnection() {
+      menuScreen.classList.add('hidden');
+      signalPanel.style.display = 'block';
+      
+      const isHost = p2pRole === 'host';
+      const connectionStatus = document.getElementById('connectionStatus');
+      
+      connectionStatus.className = 'connection-status status-connecting';
+      connectionStatus.innerHTML = '<div class="loader"></div> 연결 대기 중...';
+      
+      if (isHost) {
+        document.getElementById('signalInstructions').innerHTML = 
+          '<strong>방을 만들었습니다.</strong><br>아래 연결 코드를 친구에게 공유하세요.';
+      } else {
+        document.getElementById('signalInstructions').innerHTML = 
+          '<strong>방에 참가합니다.</strong><br>호스트의 연결 코드를 아래에 붙여넣으세요.';
+      }
+      
+      // P2P 연결 초기화
       peer = new SimplePeer({
         initiator: isHost,
         trickle: false
       });
+      
+      // 시그널링 데이터 생성 시
       peer.on('signal', data => {
-        // signal 이벤트 발생시 시그널 데이터를 표시
+        const signalData = document.getElementById('signalData');
         signalData.value = JSON.stringify(data);
+        
+        // QR 코드 생성 (호스트인 경우)
+        if (isHost) {
+          generateQRCode(signalData.value);
+        }
       });
+      
+      // 연결 성공 시
       peer.on('connect', () => {
         connectionEstablished = true;
-        signalPanel.style.display = "none";
-        initGame(); // 연결 완료 후 게임 초기화
+        connectionStatus.className = 'connection-status status-connected';
+        connectionStatus.innerHTML = '<span class="icon">✓</span> 연결되었습니다!';
+        
+        setTimeout(() => {
+          signalPanel.style.display = 'none';
+          gameContainer.style.display = 'block';
+          
+          // 상대방 아바타 변경
+          document.querySelector('.opponent-avatar').innerHTML = '👤';
+          
+          showToast('success', '상대방과 연결되었습니다. 게임을 시작합니다!');
+          
+          // 게임 초기화 (호스트만)
+          if (isHost) {
+            initGame();
+            sendGameState();
+          }
+          
+          // 게임 타이머 시작
+          startGameTimer();
+        }, 1000);
       });
+      
+      // 데이터 수신 시
       peer.on('data', data => {
-        handleMessage(JSON.parse(data));
-      });
-    }
-
-    sendSignalBtn.addEventListener("click", () => {
-      try {
-        const receivedSignal = JSON.parse(signalData.value);
-        peer.signal(receivedSignal);
-        signalData.value = "";
-        // 클라이언트인 경우, signalInstructions 업데이트
-        if (!isHost) {
-          signalInstructions.innerText = "시그널 데이터를 보냈습니다. 연결 대기중...";
-        } else {
-          signalInstructions.innerText = "답변 데이터를 받아주세요.";
+        try {
+          const message = JSON.parse(data.toString());
+          handleP2PMessage(message);
+        } catch (e) {
+          console.error('Invalid message received:', e);
         }
-      } catch (e) {
-        showToast("올바른 시그널 데이터가 아닙니다!");
-      }
-    });
-    
-    /* ========== 게임 로직 ========== */
-    // UNO 카드 관련 데이터 및 상태 변수
-    const colors = ["red", "yellow", "green", "blue"];
-    const numbers = ["0","1","2","3","4","5","6","7","8","9"];
-    const specialTypes = ["skip", "reverse", "draw2"];
-    let deck = [];
-    let discardPile = [];
-    let myHand = [];
-    let opponentCardCount = 0;
-    let currentTurn = "host"; // 호스트가 시작
-    let gameStarted = false;
-
-    // 사운드 효과 (카드 놓기)
-    const cardSound = new Audio("data:audio/wav;base64,UklGRjQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRAAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg");
-
-    // 카드 아이콘 (숫자는 그대로, 특수/와일드 카드에 아이콘 적용)
-    function getCardIcon(card) {
-      if(card.type === "number") return card.value;
-      if(card.type === "special") {
-        if(card.value === "skip") return "🚫";
-        if(card.value === "reverse") return "🔄";
-        if(card.value === "draw2") return "＋2";
-      }
-      if(card.type === "wild") {
-        if(card.value === "wild") return "★";
-        if(card.value === "draw4") return "＋4";
-      }
-      return card.value;
-    }
-
-    // 덱 생성 (UNO 기본 카드 구성)
-    function createDeck() {
-      deck = [];
-      colors.forEach(color => {
-        deck.push({color, value:"0", type:"number"});
-        numbers.slice(1).forEach(num => {
-          deck.push({color, value: num, type:"number"});
-          deck.push({color, value: num, type:"number"});
-        });
-        specialTypes.forEach(special => {
-          deck.push({color, value: special, type:"special"});
-          deck.push({color, value: special, type:"special"});
-        });
       });
-      for(let i=0;i<4;i++){
-        deck.push({color:"wild", value:"wild", type:"wild"});
-        deck.push({color:"wild", value:"draw4", type:"wild"});
+      
+      // 에러 발생 시
+      peer.on('error', err => {
+        console.error('P2P connection error:', err);
+        connectionStatus.className = 'connection-status status-error';
+        connectionStatus.innerHTML = '<span class="icon">⚠️</span> 연결 오류: ' + err.message;
+        
+        // 자동 재연결 시도
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          reconnectAttempts++;
+          showToast('warning', `연결 오류. 재연결 시도 중... (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+          setTimeout(() => setupP2PConnection(), 2000);
+        } else {
+          showToast('error', '연결에 실패했습니다. 메인 메뉴로 돌아갑니다.');
+          setTimeout(backToMenu, 2000);
+        }
+      });
+    }
+    
+    function sendSignalData() {
+      try {
+        const signalData = document.getElementById('signalData');
+        const data = JSON.parse(signalData.value);
+        peer.signal(data);
+        
+        const connectionStatus = document.getElementById('connectionStatus');
+        connectionStatus.innerHTML = '<div class="loader"></div> 연결 중...';
+        
+        showToast('info', '연결 시도 중입니다. 잠시만 기다려주세요.');
+      } catch (e) {
+        showToast('error', '올바른 연결 코드가 아닙니다.');
       }
     }
-
-    // 덱 섞기 (Fisher-Yates)
-    function shuffle(array) {
-      for(let i=array.length-1;i>0;i--){
-        const j = Math.floor(Math.random()*(i+1));
-        [array[i], array[j]] = [array[j], array[i]];
-      }
-      return array;
+    
+    function copySignalData() {
+      const signalData = document.getElementById('signalData');
+      signalData.select();
+      document.execCommand('copy');
+      showToast('success', '연결 코드가 클립보드에 복사되었습니다.');
     }
-
-    // 호스트가 게임 시작 시: 덱 생성, 섞기, 카드 분배 (각 7장) 및 오픈 카드 설정
-    function startNewGame() {
+    
+    function generateQRCode(data) {
+      const qrContainer = document.getElementById('qrContainer');
+      qrContainer.innerHTML = '';
+      
+      new QRCode(qrContainer, {
+        text: data,
+        width: 180,
+        height: 180,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.L
+      });
+    }
+    
+    function cancelConnection() {
+      if (peer) {
+        peer.destroy();
+      }
+      backToMenu();
+    }
+    
+    function initGame() {
+      // 게임 상태 초기화
+      deck = [];
+      discardPile = [];
+      myHand = [];
+      opponentHand = [];
+      opponentCardCount = 0;
+      currentTurn = 'player'; // 플레이어부터 시작
+      lastCardDrawn = false;
+      canCallUno = false;
+      unoWasCalled = false;
+      cardsPlayedCount = 0;
+      cardsDrawnCount = 0;
+      
+      // 덱 생성 및 섞기
       createDeck();
       deck = shuffle(deck);
-      myHand = deck.splice(0,7);
-      // 상대방 카드도 7장 (호스트만 관리하며 상대에게는 카드 수만 전달)
-      opponentCardCount = 7;
-      let firstCard = deck.shift();
-      // 첫 카드는 와일드가 아니게
-      while(firstCard.type === "wild"){
-        deck.push(firstCard);
-        firstCard = deck.shift();
+      
+      // 카드 분배 (각 7장)
+      for (let i = 0; i < 7; i++) {
+        myHand.push(deck.pop());
+        if (gameMode === 'ai') {
+          opponentHand.push(deck.pop());
+        } else {
+          opponentCardCount++;
+        }
       }
-      discardPile = [firstCard];
-      currentTurn = "host"; // 호스트부터 시작
+      
+      // 첫 카드 설정 (와일드 카드가 아니도록)
+      let firstCard = deck.pop();
+      while (firstCard.type === 'wild') {
+        deck.unshift(firstCard); // 덱 밑으로
+        firstCard = deck.pop();
+      }
+      
+      discardPile.push(firstCard);
+      currentColor = firstCard.color;
+      currentValue = firstCard.value;
+      
+      // 게임 시작
       gameStarted = true;
-      sendGameState();
-      renderGame();
-    }
-
-    // 게임 상태를 JSON 메시지로 보내기 (호스트 전용)
-    function sendGameState() {
-      if(!isHost) return;
-      const state = {
-        type: "update",
-        publicState: {
-          topCard: discardPile[discardPile.length-1],
-          drawCount: deck.length,
-          opponentCardCount: opponentCardCount,
-          currentTurn: currentTurn
-        }
-      };
-      peer.send(JSON.stringify(state));
-    }
-
-    // 메시지 처리 (호스트와 클라이언트 모두)
-    function handleMessage(msg) {
-      if(msg.type === "update") {
-        // 클라이언트는 호스트가 보낸 업데이트 수신
-        updatePublicState(msg.publicState);
-        renderGame();
-      } else if(msg.type === "move") {
-        // 상대방의 움직임 (호스트인 경우, 클라이언트의 요청)
-        if(isHost) {
-          processOpponentMove(msg.move);
-        }
+      
+      // UI 업데이트
+      updateGameUI();
+      
+      // AI 모드이고 상대 차례면 AI 턴 실행
+      if (gameMode === 'ai' && currentTurn === 'opponent') {
+        setTimeout(playAITurn, getAIThinkingTime());
       }
     }
-
-    // 클라이언트용: 공개 상태 업데이트 (내가 볼 수 있는 정보)
-    let publicState = {};
-    function updatePublicState(state) {
-      publicState = state;
-      currentTurn = state.currentTurn;
-    }
-
-    /* ========== UI 렌더링 ========== */
-    // 상대 정보 (카드 수만 표시)
-    function renderOpponentInfo() {
-      const oppDiv = document.getElementById("opponentInfo");
-      oppDiv.innerText = "상대 카드: " + (isHost ? opponentCardCount : publicState.opponentCardCount) + "장";
-    }
-
-    // 내 핸드 렌더링 (겹쳐서 배치)
-    function renderHand() {
-      const container = document.getElementById("playerHand");
-      container.innerHTML = "";
-      const containerWidth = container.clientWidth || 900;
-      const cardWidth = 70;
-      let offset = 0;
-      if(myHand.length > 1) {
-        offset = Math.min(40, (containerWidth - cardWidth) / (myHand.length - 1));
-      }
-      myHand.forEach((card, i) => {
-        const cardDiv = document.createElement("div");
-        cardDiv.className = "card " + card.color;
-        cardDiv.style.left = (i*offset)+"px";
-        cardDiv.innerText = getCardIcon(card);
-        // 내가 차례일 때만 카드 클릭 허용
-        if((isHost && currentTurn==="host") || (!isHost && currentTurn==="client")){
-          cardDiv.onclick = (e)=> playerPlay(e, i);
+    
+    /* ========== 덱 생성 및 관리 ========== */
+    function createDeck() {
+      deck = [];
+      
+      // 일반 숫자 카드 (0은 각 색상별 1장, 1-9는 각 2장)
+      colors.forEach(color => {
+        // 0은 각 색상당 1장만
+        deck.push({color, value: "0", type: "number"});
+        
+        // 1-9는 각 색상당 2장씩
+        for (let n = 1; n <= 9; n++) {
+          deck.push({color, value: n.toString(), type: "number"});
+          deck.push({color, value: n.toString(), type: "number"});
         }
-        container.appendChild(cardDiv);
+        
+        // 특수 카드 (건너뛰기, 뒤집기, 2장 뽑기) 각 2장씩
+        specialTypes.forEach(special => {
+          deck.push({color, value: special, type: "special"});
+          deck.push({color, value: special, type: "special"});
+        });
+      });
+      
+      // 와일드 카드 (색상 변경, 4장 뽑기) 각 4장
+      wildTypes.forEach(wild => {
+        for (let i = 0; i < 4; i++) {
+          deck.push({color: "wild", value: wild, type: "wild"});
+        }
       });
     }
-
-    // 중앙 테이블 렌더링 (드로우, 버림 파일)
-    function renderTable() {
-      const drawDiv = document.getElementById("drawPile");
-      const discardDiv = document.getElementById("discardPile");
-      drawDiv.innerHTML = "";
-      discardDiv.innerHTML = "";
-      // 드로우 파일
-      const drawCard = document.createElement("div");
-      drawCard.className = "card";
-      drawCard.style.position = "relative";
-      drawCard.style.cursor = ( (isHost && currentTurn==="host") || (!isHost && currentTurn==="client") ) ? "pointer" : "default";
-      drawCard.innerText = "드로우\n(" + (isHost ? deck.length : publicState.drawCount) + ")";
-      drawCard.onclick = ()=> {
-        if((isHost && currentTurn==="host") || (!isHost && currentTurn==="client")){
-          playerDraw();
-        }
-      };
-      drawDiv.appendChild(drawCard);
-      // 버림 파일 (가장 위의 카드)
-      const topCard = discardPile[discardPile.length-1];
-      const topDiv = document.createElement("div");
-      topDiv.className = "card " + topCard.color;
-      topDiv.style.position = "relative";
-      topDiv.innerText = getCardIcon(topCard);
-      topDiv.classList.add("play-animation");
-      discardDiv.appendChild(topDiv);
+    
+    function shuffle(array) {
+      const newArray = [...array];
+      for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+      }
+      return newArray;
     }
-
-    function renderGame() {
-      renderOpponentInfo();
-      renderHand();
-      renderTable();
-      document.getElementById("message").innerText = ( (isHost && currentTurn==="host") || (!isHost && currentTurn==="client") ) ? "당신의 차례입니다." : "상대의 차례입니다.";
+    
+    function reshuffleDiscardPile() {
+      // 마지막 카드 저장
+      const lastCard = discardPile.pop();
+      
+      // 나머지 버림 파일을 섞어서 드로우 파일로
+      deck = shuffle(discardPile);
+      discardPile = [lastCard];
+      
+      showToast('info', '버림 파일을 섞어 드로우 파일로 재구성했습니다.');
     }
-
-    // 토스트 메시지 함수
-    function showToast(message) {
-      const container = document.getElementById("toastContainer");
-      const toast = document.createElement("div");
-      toast.className = "toast";
-      toast.innerText = message;
-      container.appendChild(toast);
-      setTimeout(()=> toast.remove(), 3000);
-    }
-
+    
     /* ========== 게임 플레이 로직 ========== */
-    // 플레이어가 카드를 내면 호출 (호스트와 클라이언트 모두)
-    function playerPlay(e, index) {
-      if( !(((isHost && currentTurn==="host") || (!isHost && currentTurn==="client"))) ) return;
-      const chosenCard = myHand[index];
-      if(isPlayable(chosenCard)) {
+    function playerPlay(cardIndex) {
+      if (currentTurn !== 'player') return;
+      
+      const card = myHand[cardIndex];
+      
+      if (isPlayable(card)) {
         // 카드 이동 애니메이션
-        animateCardMove(e.currentTarget, ()=>{
-          playCard(chosenCard, isHost ? "host" : "client");
-          myHand.splice(index, 1);
-          cardSound.play();
-          if(isHost){
-            // 호스트 업데이트: 진행 상대 카드 수 변화(예: draw 효과) 등
-            nextTurn();
-            sendGameState();
-            renderGame();
-          } else {
-            // 클라이언트: 자신의 움직임을 호스트에게 전달
-            peer.send(JSON.stringify({type:"move", move:{card: chosenCard}}));
+        const cardElement = document.querySelector(`#playerHand .card-player:nth-child(${cardIndex + 1})`);
+        animateCardPlay(cardElement, () => {
+          // 카드 플레이 로직
+          playCard(card, cardIndex);
+          
+          // 사운드 재생
+          playSound('cardPlay');
+          
+          // 남은 카드가 하나면 UNO 버튼 활성화
+          if (myHand.length === 1) {
+            canCallUno = true;
+            document.getElementById('unoBtn').disabled = false;
+            
+            // 자동으로 UNO 외치지 않음 - 버튼 눌러야 함
+            showToast('warning', 'UNO 버튼을 눌러 "UNO!"를 외치세요!');
           }
+          
+          // 모든 카드를 냈으면 게임 종료
+          if (myHand.length === 0) {
+            endGame('player');
+            return;
+          }
+          
+          // 특수 카드 효과 처리
+          if (card.type === 'special') {
+            if (card.value === 'skip' || card.value === 'reverse') {
+              // 2인 게임에서는 상대방 턴 스킵 (다시 내 차례)
+              showToast('info', '상대의 턴을 건너뜁니다!');
+              currentTurn = 'player';
+            } else if (card.value === 'draw2') {
+              // 상대방 2장 뽑기
+              if (gameMode === 'ai') {
+                for (let i = 0; i < 2; i++) {
+                  if (deck.length === 0) reshuffleDiscardPile();
+                  opponentHand.push(deck.pop());
+                }
+              } else {
+                // P2P 모드에서는 상대방에게 알림
+                sendGameAction({
+                  action: 'drawCards',
+                  count: 2
+                });
+              }
+              showToast('info', '상대방이 2장의 카드를 뽑습니다!');
+            }
+          } else if (card.type === 'wild') {
+            // 와일드 카드 효과 처리
+            if (card.value === 'wild') {
+              // 색상 선택 후 처리 완료됨
+            } else if (card.value === 'draw4') {
+              // 상대방 4장 뽑기
+              if (gameMode === 'ai') {
+                for (let i = 0; i < 4; i++) {
+                  if (deck.length === 0) reshuffleDiscardPile();
+                  opponentHand.push(deck.pop());
+                }
+              } else {
+                // P2P 모드에서는 상대방에게 알림
+                sendGameAction({
+                  action: 'drawCards',
+                  count: 4
+                });
+              }
+              showToast('info', '상대방이 4장의 카드를 뽑습니다!');
+            }
+          }
+          
+          // P2P 모드에서 상대방에게 액션 전송
+          if (gameMode === 'p2p') {
+            sendGameAction({
+              action: 'playCard',
+              card: card
+            });
+          }
+          
+          // 턴 종료
+          lastCardDrawn = false;
+          endTurn();
         });
       } else {
-        showToast("이 카드는 낼 수 없습니다!");
+        showToast('error', '이 카드는 낼 수 없습니다!');
       }
     }
-
-    // 플레이어가 드로우 버튼 클릭 시 처리
-    function playerDraw() {
-      if(!(((isHost && currentTurn==="host") || (!isHost && currentTurn==="client"))) ) return;
-      if(deck.length === 0) reshuffleDeck();
-      const drawn = deck.shift();
-      if(isHost){
-        myHand.push(drawn);
-        // 만약 드로우 후 낼 카드가 없으면 턴 종료
-        nextTurn();
-        sendGameState();
-        renderGame();
-      } else {
-        peer.send(JSON.stringify({type:"move", move:{draw:true}}));
-      }
-    }
-
-    // 호스트용: 클라이언트의 움직임 처리
-    function processOpponentMove(move) {
-      if(move.draw) {
-        // 상대가 드로우함: 클라이언트의 패 증가
-        opponentCardCount++;
-      } else if(move.card) {
-        // 상대가 카드를 냄: 호스트에서 클라이언트의 패 수 감소
-        if(opponentCardCount>0) opponentCardCount--;
-        // 버림 파일 업데이트
-        discardPile.push(move.card);
-        // 특수 카드 효과 처리 (호스트 측에서 처리)
-        processCardEffect(move.card, "client");
-      }
-      nextTurn();
-      sendGameState();
-      renderGame();
-    }
-
-    // 카드 플레이 시 효과 처리 (호스트가 관리)
-    function playCard(card, player) {
-      // 와일드 카드: 색상 선택
-      if(card.type === "wild") {
-        let chosenColor = prompt("원하는 색상을 입력하세요 (red, yellow, green, blue)").toLowerCase();
-        if(!colors.includes(chosenColor)){
-          chosenColor = colors[Math.floor(Math.random()*4)];
-          showToast("잘못된 색상 선택, 무작위 색상으로 설정합니다.");
+    
+    function playCard(card, index) {
+      // 해당 카드를 손에서 제거
+      if (index !== undefined) {
+        if (currentTurn === 'player') {
+          myHand.splice(index, 1);
+        } else if (gameMode === 'ai') {
+          opponentHand.splice(index, 1);
         }
-        card.chosenColor = chosenColor;
-        card.color = chosenColor;
       }
+      
+      // 와일드 카드인 경우 색상 선택
+      if (card.type === 'wild' && currentTurn === 'player') {
+        showColorSelector();
+        // 선택 프로세스는 selectWildColor 함수에서 계속됨
+        return;
+      } else if (card.type === 'wild' && currentTurn === 'opponent' && gameMode === 'ai') {
+        // AI는 자신의 손에 가장 많은 색상을 선택
+        const colorCounts = {};
+        colors.forEach(c => colorCounts[c] = 0);
+        
+        opponentHand.forEach(c => {
+          if (c.color !== 'wild') {
+            colorCounts[c.color]++;
+          }
+        });
+        
+        let maxColor = colors[0];
+        let maxCount = colorCounts[maxColor];
+        
+        colors.forEach(c => {
+          if (colorCounts[c] > maxCount) {
+            maxColor = c;
+            maxCount = colorCounts[c];
+          }
+        });
+        
+        card.chosenColor = maxColor;
+      }
+      
+      // 카드를 버림 파일에 추가
       discardPile.push(card);
-      processCardEffect(card, player);
+      
+      // 현재 색상 및 값 업데이트
+      currentColor = card.type === 'wild' ? card.chosenColor : card.color;
+      currentValue = card.value;
+      
+      // 카드 낸 횟수 증가
+      cardsPlayedCount++;
+      
+      // UI 업데이트
+      updateGameUI();
     }
-
-    // 카드 효과 처리 (skip, reverse, draw2, draw4 등)
-    function processCardEffect(card, player) {
-      if(card.value === "skip" || card.value === "reverse") {
-        // 2인 게임에서는 reverse는 skip과 동일
-        // 턴 건너뛰기 효과: 그냥 턴 넘김
-      } else if(card.value === "draw2") {
-        for(let i=0;i<2;i++){
-          if(deck.length===0) reshuffleDeck();
-          if(player==="host"){
-            // 상대가 받음
-            opponentCardCount++;
-          } else {
-            myHand.push(deck.shift());
-          }
+    
+    function showColorSelector() {
+      colorSelector.style.display = 'block';
+    }
+    
+    function selectWildColor(color) {
+      // 마지막 버림 파일의 카드 색상 설정
+      const lastCard = discardPile[discardPile.length - 1];
+      lastCard.chosenColor = color;
+      
+      // 현재 색상 업데이트
+      currentColor = color;
+      
+      // 색상 선택기 닫기
+      colorSelector.style.display = 'none';
+      
+      // UI 업데이트
+      updateGameUI();
+      
+      // 턴 종료
+      endTurn();
+    }
+    
+    function isPlayable(card) {
+      if (!card) return false;
+      
+      // 와일드 카드는 항상 낼 수 있음
+      if (card.type === 'wild') return true;
+      
+      // 같은 색상 또는 같은 값/타입의 카드 낼 수 있음
+      return card.color === currentColor || 
+             (card.type === 'number' && card.value === currentValue) ||
+             (card.type === 'special' && card.value === currentValue);
+    }
+    
+    function playerDrawCard() {
+      if (currentTurn !== 'player' || lastCardDrawn) return;
+      
+      // 덱이 비었으면 버림 파일 다시 섞기
+      if (deck.length === 0) {
+        reshuffleDiscardPile();
+      }
+      
+      // 카드 뽑기
+      const drawnCard = deck.pop();
+      myHand.push(drawnCard);
+      cardsDrawnCount++;
+      
+      // 뽑은 카드 효과
+      playSound('cardDraw');
+      
+      // 뽑은 카드를 낼 수 있으면 바로 낼 수 있게 함
+      lastCardDrawn = true;
+      
+      // 패스 버튼 활성화
+      document.getElementById('passBtn').disabled = false;
+      
+      // P2P 모드에서 상대방에게 알림
+      if (gameMode === 'p2p') {
+        sendGameAction({
+          action: 'drawCard'
+        });
+      }
+      
+      // 뽑은 카드 표시
+      showToast('info', `카드를 뽑았습니다: ${getCardName(drawnCard)}`);
+      
+      // UI 업데이트
+      updateGameUI();
+      
+      // 뽑은 카드를 낼 수 있는지 확인하고 시각적 표시
+      if (isPlayable(drawnCard)) {
+        const lastCardElement = document.querySelector('#playerHand .card-player:last-child');
+        if (lastCardElement) {
+          lastCardElement.querySelector('.card').classList.add('can-play');
         }
-      } else if(card.value === "draw4") {
-        for(let i=0;i<4;i++){
-          if(deck.length===0) reshuffleDeck();
-          if(player==="host"){
-            opponentCardCount++;
-          } else {
-            myHand.push(deck.shift());
-          }
-        }
-        // 와일드 드로우4 카드에도 색상 선택 적용 (이미 처리됨)
       }
     }
-
-    // 턴 전환
-    function nextTurn() {
-      currentTurn = (currentTurn==="host") ? "client" : "host";
-    }
-
-    // 덱이 비었을 경우 재구성 (버림 파일 제외)
-    function reshuffleDeck() {
-      let top = discardPile.pop();
-      deck = shuffle(discardPile);
-      discardPile = [top];
-    }
-
-    // 카드 이동 애니메이션 (클릭된 카드가 중앙 버림 파일 위치로 이동)
-    function animateCardMove(cardElem, callback) {
-      const startRect = cardElem.getBoundingClientRect();
-      const discardElem = document.getElementById("discardPile");
-      const targetRect = discardElem.getBoundingClientRect();
-      const clone = cardElem.cloneNode(true);
-      clone.style.position = "fixed";
-      clone.style.left = startRect.left + "px";
-      clone.style.top = startRect.top + "px";
-      clone.style.margin = 0;
-      clone.style.zIndex = 1000;
-      document.body.appendChild(clone);
-      const deltaX = targetRect.left + targetRect.width/2 - (startRect.left + startRect.width/2);
-      const deltaY = targetRect.top + targetRect.height/2 - (startRect.top + startRect.height/2);
-      clone.animate([
-        { transform: "translate(0,0)", opacity: 1 },
-        { transform: `translate(${deltaX}px, ${deltaY}px) scale(0.5)`, opacity: 0.5 }
-      ], { duration: 500, easing: "ease-in-out" }).onfinish = () => {
-        clone.remove();
-        callback();
-      };
-    }
-
-    /* ========== 게임 초기화 ========== */
-    function initGame() {
-      // 연결된 후 역할에 따라 게임 초기화 (호스트는 게임을 시작하고, 클라이언트는 호스트의 업데이트를 기다림)
-      gameContainer.style.display = "flex";
-      if(isHost) {
-        startNewGame();
+    
+    function getCardName(card) {
+      if (card.type === 'number') {
+        return `${card.color} ${card.value}`;
+      } else if (card.type === 'special') {
+        let specialName = '';
+        if (card.value === 'skip') specialName = '건너뛰기';
+        else if (card.value === 'reverse') specialName = '방향 전환';
+        else if (card.value === 'draw2') specialName = '2장 뽑기';
+        return `${card.color} ${specialName}`;
+      } else if (card.type === 'wild') {
+        return card.value === 'wild' ? '색상 변경' : '4장 뽑기';
       }
+      return '';
+    }
+    
+    function passTurn() {
+      if (currentTurn !== 'player' || !lastCardDrawn) return;
+      
+      document.getElementById('passBtn').disabled = true;
+      lastCardDrawn = false;
+      endTurn();
+    }
+    
+    function callUno() {
+      if (!canCallUno) return;
+      
+      unoWasCalled = true;
+      canCallUno = false;
+      document.getElementById('unoBtn').disabled = true;
+      
+      playSound('uno');
+      showToast('warning', '플레이어: "UNO!"', 1500);
+      
+      // P2P 모드에서 상대방에게 알림
+      if (gameMode === 'p2p') {
+        sendGameAction({
+          action: 'calledUno'
+        });
+      }
+      
+      // UI 효과
+      const messageElement = document.getElementById('message');
+      messageElement.textContent = 'UNO!';
+      messageElement.classList.add('highlight');
+      
+      setTimeout(() => {
+        messageElement.classList.remove('highlight');
+      }, 1500);
+    }
+    
+    function endTurn() {
+      // 우노 콜 체크 (1장 남았는데 UNO 외치지 않으면 2장 뽑기)
+      if (currentTurn === 'player' && myHand.length === 1 && !unoWasCalled) {
+        showToast('error', 'UNO를 외치지 않아 2장의 카드를 뽑습니다!');
+        
+        // 2장 추가
+        for (let i = 0; i < 2; i++) {
+          if (deck.length === 0) reshuffleDiscardPile();
+          myHand.push(deck.pop());
+          cardsDrawnCount++;
+        }
+        
+        playSound('warning');
+      }
+      
+      // UNO 콜 상태 초기화
+      canCallUno = false;
+      unoWasCalled = false;
+      document.getElementById('unoBtn').disabled = true;
+      
+      // 턴 전환
+      currentTurn = currentTurn === 'player' ? 'opponent' : 'player';
+      
+      // UI 업데이트
+      updateGameUI();
+      
+      // 상대 턴이면 AI 또는 대기
+      if (currentTurn === 'opponent') {
+        if (gameMode === 'ai') {
+          // AI 턴 실행 (지연 시간 추가)
+          setTimeout(playAITurn, getAIThinkingTime());
+        }
+      }
+    }
+    
+    /* ========== AI 로직 ========== */
+    function playAITurn() {
+      if (currentTurn !== 'opponent' || gameMode !== 'ai') return;
+      
+      // AI 생각 중 표시
+      const opponentStatus = document.querySelector('.opponent-status');
+      opponentStatus.classList.add('thinking');
+      
+      // 실제 AI 행동 지연
+      setTimeout(() => {
+        // 낼 수 있는 카드 찾기
+        const playableCards = opponentHand.map((card, index) => ({ card, index }))
+                                         .filter(item => isPlayable(item.card));
+        
+        if (playableCards.length > 0) {
+          // 카드 내기 (AI 전략에 따라 카드 선택)
+          const cardChoice = selectAICard(playableCards);
+          
+          // 카드 애니메이션 및 플레이
+          const randomOpponentCard = document.querySelector('.opponent-card');
+          animateCardPlay(randomOpponentCard, () => {
+            playCard(cardChoice.card, cardChoice.index);
+            playSound('cardPlay');
+            
+            // UNO 체크 (AI는 항상 UNO 외침)
+            if (opponentHand.length === 1) {
+              showToast('warning', '상대: "UNO!"', 1500);
+              playSound('uno');
+            }
+            
+            // 모든 카드 냈는지 체크
+            if (opponentHand.length === 0) {
+              endGame('opponent');
+              return;
+            }
+            
+            // 상태 업데이트 및 턴 종료
+            opponentStatus.classList.remove('thinking');
+            endTurn();
+          });
+        } else {
+          // 낼 수 있는 카드가 없으면 드로우
+          if (deck.length === 0) {
+            reshuffleDiscardPile();
+          }
+          
+          // 카드 뽑기
+          const drawnCard = deck.pop();
+          opponentHand.push(drawnCard);
+          
+          // 뽑은 카드 표시 (난이도에 따라 정보 표시 여부 결정)
+          if (aiDifficulty === 'easy') {
+            showToast('info', `상대가 카드를 뽑았습니다: ${getCardName(drawnCard)}`);
+          } else {
+            showToast('info', '상대가 카드를 뽑았습니다.');
+          }
+          
+          playSound('cardDraw');
+          
+          // 뽑은 카드를 낼 수 있으면 내기
+          if (isPlayable(drawnCard)) {
+            setTimeout(() => {
+              const randomOpponentCard = document.querySelector('.opponent-card');
+              animateCardPlay(randomOpponentCard, () => {
+                playCard(drawnCard, opponentHand.length - 1);
+                playSound('cardPlay');
+                
+                // UNO 체크
+                if (opponentHand.length === 1) {
+                  showToast('warning', '상대: "UNO!"', 1500);
+                  playSound('uno');
+                }
+                
+                // 모든 카드 냈는지 체크
+                if (opponentHand.length === 0) {
+                  endGame('opponent');
+                  return;
+                }
+                
+                // 상태 업데이트 및 턴 종료
+                opponentStatus.classList.remove('thinking');
+                endTurn();
+              });
+            }, 800);
+          } else {
+            // 낼 수 없으면 턴 종료
+            opponentStatus.classList.remove('thinking');
+            endTurn();
+          }
+        }
+      }, 1000);
+    }
+    
+    function selectAICard(playableCards) {
+      // AI 난이도에 따른 카드 선택 전략
+      if (aiDifficulty === 'easy') {
+        // 쉬움: 랜덤 선택
+        return playableCards[Math.floor(Math.random() * playableCards.length)];
+      } else if (aiDifficulty === 'medium') {
+        // 보통: 숫자 카드 우선, 같은 숫자 카드면 랜덤
+        const numberCards = playableCards.filter(item => item.card.type === 'number');
+        
+        if (numberCards.length > 0) {
+          return numberCards[Math.floor(Math.random() * numberCards.length)];
+        }
+        
+        // 숫자 카드가 없으면 그냥 랜덤
+        return playableCards[Math.floor(Math.random() * playableCards.length)];
+      } else {
+        // 어려움: 특수 카드 우선, 다음으로 와일드, 마지막으로 숫자
+        // 와일드 카드
+        const wildCards = playableCards.filter(item => item.card.type === 'wild');
+        // 특수 카드
+        const specialCards = playableCards.filter(item => item.card.type === 'special');
+        // 숫자 카드
+        const numberCards = playableCards.filter(item => item.card.type === 'number');
+        
+        if (specialCards.length > 0) {
+          return specialCards[Math.floor(Math.random() * specialCards.length)];
+        } else if (wildCards.length > 0) {
+          return wildCards[Math.floor(Math.random() * wildCards.length)];
+        } else {
+          return numberCards[Math.floor(Math.random() * numberCards.length)];
+        }
+      }
+    }
+    
+    function getAIThinkingTime() {
+      // 난이도에 따른 AI 생각 시간
+      if (aiDifficulty === 'easy') {
+        return 1000 + Math.random() * 1000; // 1-2초
+      } else if (aiDifficulty === 'medium') {
+        return 800 + Math.random() * 700; // 0.8-1.5초
+      } else {
+        return 500 + Math.random() * 500; // 0.5-1초
+      }
+    }
+    
+    /* ========== P2P 통신 로직 ========== */
+    function sendGameAction(action) {
+      if (gameMode !== 'p2p' || !connectionEstablished) return;
+      
+      peer.send(JSON.stringify({
+        type: 'gameAction',
+        action: action
+      }));
+    }
+    
+    function sendGameState() {
+      if (gameMode !== 'p2p' || !connectionEstablished) return;
+      
+      peer.send(JSON.stringify({
+        type: 'gameState',
+        state: {
+          deck: deck,
+          discardPile: discardPile,
+          currentTurn: currentTurn,
+          currentColor: currentColor,
+          currentValue: currentValue,
+          opponentHand: myHand, // 내 손 카드가 상대방에게는 상대 카드
+          opponentCardCount: myHand.length
+        }
+      }));
+    }
+    
+    function handleP2PMessage(message) {
+      if (!message || !message.type) return;
+      
+      switch (message.type) {
+        case 'gameState':
+          // 게임 상태 업데이트 (클라이언트가 받음)
+          deck = message.state.deck;
+          discardPile = message.state.discardPile;
+          currentTurn = message.state.currentTurn === 'player' ? 'opponent' : 'player';
+          currentColor = message.state.currentColor;
+          currentValue = message.state.currentValue;
+          opponentHand = message.state.opponentHand;
+          opponentCardCount = message.state.opponentCardCount;
+          
+          // UI 업데이트
+          updateGameUI();
+          break;
+          
+        case 'gameAction':
+          handleOpponentAction(message.action);
+          break;
+      }
+    }
+    
+    function handleOpponentAction(action) {
+      if (!action || !action.action) return;
+      
+      switch (action.action) {
+        case 'playCard':
+          // 상대방이 카드를 냄
+          const card = action.card;
+          opponentCardCount--;
+          
+          // 애니메이션 재생
+          const randomOpponentCard = document.querySelector('.opponent-card');
+          animateCardPlay(randomOpponentCard, () => {
+            // 버림 파일에 카드 추가
+            discardPile.push(card);
+            
+            // 현재 색상 및 값 업데이트
+            currentColor = card.type === 'wild' ? card.chosenColor : card.color;
+            currentValue = card.value;
+            
+            // 효과 처리
+            if (card.type === 'special') {
+              if (card.value === 'skip' || card.value === 'reverse') {
+                // 내 턴 스킵
+                showToast('info', '상대가 당신의 턴을 건너뜁니다!');
+                currentTurn = 'opponent';
+              } else if (card.value === 'draw2') {
+                // 2장 뽑기
+                showToast('info', '당신은 2장의 카드를 뽑아야 합니다!');
+                for (let i = 0; i < 2; i++) {
+                  if (deck.length === 0) reshuffleDiscardPile();
+                  myHand.push(deck.pop());
+                  cardsDrawnCount++;
+                }
+              }
+            } else if (card.type === 'wild' && card.value === 'draw4') {
+              // 4장 뽑기
+              showToast('info', '당신은 4장의 카드를 뽑아야 합니다!');
+              for (let i = 0; i < 4; i++) {
+                if (deck.length === 0) reshuffleDiscardPile();
+                myHand.push(deck.pop());
+                cardsDrawnCount++;
+              }
+            }
+            
+            // 사운드 재생
+            playSound('cardPlay');
+            
+            // UI 업데이트
+            updateGameUI();
+            
+            // 턴 시작 (내 턴이면)
+            if (currentTurn === 'player') {
+              // 패스할 것은 없으므로 처음 상태로
+              lastCardDrawn = false;
+              document.getElementById('passBtn').disabled = true;
+            }
+          });
+          break;
+          
+        case 'drawCard':
+          // 상대방이 카드를 뽑음
+          opponentCardCount++;
+          showToast('info', '상대가 카드를 뽑았습니다.');
+          playSound('cardDraw');
+          updateGameUI();
+          break;
+          
+        case 'drawCards':
+          // 내가 여러 장 뽑아야 함 (draw2, draw4 효과)
+          const count = action.count || 0;
+          for (let i = 0; i < count; i++) {
+            if (deck.length === 0) reshuffleDiscardPile();
+            myHand.push(deck.pop());
+            cardsDrawnCount++;
+          }
+          updateGameUI();
+          break;
+          
+        case 'calledUno':
+          // 상대방이 UNO 외침
+          showToast('warning', '상대: "UNO!"', 1500);
+          playSound('uno');
+          
+          // UI 효과
+          const messageElement = document.getElementById('message');
+          messageElement.textContent = '상대가 UNO!';
+          messageElement.classList.add('highlight');
+          
+          setTimeout(() => {
+            messageElement.classList.remove('highlight');
+          }, 1500);
+          break;
+      }
+    }
+    
+    /* ========== UI 업데이트 ========== */
+    function updateGameUI() {
+      renderPlayerHand();
+      renderOpponentHand();
+      renderDiscardPile();
+      renderDeckCount();
+      updateTurnDisplay();
+      updateMessage();
+    }
+    
+    function renderPlayerHand() {
+      const handContainer = document.getElementById('playerHand');
+      handContainer.innerHTML = '';
+      
+      // 카드 정렬 (숫자 > 특수 > 와일드, 색상별)
+      const sortedHand = [...myHand].sort((a, b) => {
+        if (a.type !== b.type) {
+          if (a.type === 'number') return -1;
+          if (b.type === 'number') return 1;
+          if (a.type === 'special') return -1;
+          if (b.type === 'special') return 1;
+        }
+        if (a.color !== b.color) {
+          return colors.indexOf(a.color) - colors.indexOf(b.color);
+        }
+        if (a.type === 'number') {
+          return parseInt(a.value) - parseInt(b.value);
+        }
+        return 0;
+      });
+      
+      sortedHand.forEach((card, index) => {
+        const cardWrapper = document.createElement('div');
+        cardWrapper.className = 'card-player';
+        
+        const cardElement = document.createElement('div');
+        cardElement.className = `card ${card.color}`;
+        
+        // 카드 내용물
+        const cardContent = document.createElement('div');
+        cardContent.className = 'card-content';
+        
+        // 카드 모서리 표시
+        const cardCorner = document.createElement('div');
+        cardCorner.className = 'card-corners';
+        cardCorner.textContent = getCardIcon(card);
+        
+        const cardCornerBR = document.createElement('div');
+        cardCornerBR.className = 'card-corners-br';
+        cardCornerBR.textContent = getCardIcon(card);
+        
+        cardContent.textContent = getCardIcon(card);
+        cardContent.appendChild(cardCorner);
+        cardContent.appendChild(cardCornerBR);
+        
+        cardElement.appendChild(cardContent);
+        
+        // 와일드 카드의 경우 선택된 색상 표시
+        if (card.type === 'wild' && card.chosenColor) {
+          cardElement.className = `card ${card.chosenColor}`;
+        }
+        
+        // 내 턴이고 카드를 낼 수 있는 경우 시각적 효과
+        if (currentTurn === 'player' && isPlayable(card)) {
+          cardElement.classList.add('can-play');
+        }
+        
+        // 이벤트 리스너 (내 턴일 때만 활성화)
+        if (currentTurn === 'player') {
+          cardElement.addEventListener('click', () => playerPlay(index));
+        }
+        
+        cardWrapper.appendChild(cardElement);
+        handContainer.appendChild(cardWrapper);
+      });
+    }
+    
+    function renderOpponentHand() {
+      const opponentCardsContainer = document.getElementById('opponentCards');
+      opponentCardsContainer.innerHTML = '';
+      
+      const count = gameMode === 'ai' ? opponentHand.length : opponentCardCount;
+      document.getElementById('opponentInfo').textContent = `상대 카드: ${count}장`;
+      
+      // 최대 10장만 표시 (UI 공간 제한)
+      const visibleCount = Math.min(count, 10);
+      
+      for (let i = 0; i < visibleCount; i++) {
+        const cardElement = document.createElement('div');
+        cardElement.className = 'opponent-card card-back';
+        opponentCardsContainer.appendChild(cardElement);
+      }
+      
+      // 카드가 많으면 +N 형태로 표시
+      if (count > 10) {
+        const extraElement = document.createElement('div');
+        extraElement.className = 'opponent-card card-back';
+        extraElement.textContent = `+${count - 10}`;
+        opponentCardsContainer.appendChild(extraElement);
+      }
+      
+      // 상대방 상태 업데이트
+      const opponentStatus = document.querySelector('.opponent-status');
+      if (currentTurn === 'opponent') {
+        opponentStatus.classList.add('active');
+      } else {
+        opponentStatus.classList.remove('active');
+        opponentStatus.classList.remove('thinking');
+      }
+    }
+    
+    function renderDiscardPile() {
+      const discardContainer = document.getElementById('discardPile');
+      discardContainer.innerHTML = '';
+      
+      if (discardPile.length > 0) {
+        const topCard = discardPile[discardPile.length - 1];
+        
+        const cardElement = document.createElement('div');
+        cardElement.className = `card ${topCard.type === 'wild' && topCard.chosenColor ? topCard.chosenColor : topCard.color}`;
+        
+        // 카드 내용물
+        const cardContent = document.createElement('div');
+        cardContent.className = 'card-content';
+        
+        // 카드 모서리 표시
+        const cardCorner = document.createElement('div');
+        cardCorner.className = 'card-corners';
+        cardCorner.textContent = getCardIcon(topCard);
+        
+        const cardCornerBR = document.createElement('div');
+        cardCornerBR.className = 'card-corners-br';
+        cardCornerBR.textContent = getCardIcon(topCard);
+        
+        cardContent.textContent = getCardIcon(topCard);
+        cardContent.appendChild(cardCorner);
+        cardContent.appendChild(cardCornerBR);
+        
+        cardElement.appendChild(cardContent);
+        
+        discardContainer.appendChild(cardElement);
+      }
+    }
+    
+    function renderDeckCount() {
+      const drawContainer = document.getElementById('drawPile');
+      const deckCountElement = document.getElementById('deckCount');
+      drawContainer.innerHTML = '';
+      
+      const cardBackElement = document.createElement('div');
+      cardBackElement.className = 'card card-back';
+      
+      // 드로우 파일 클릭 이벤트 (내 턴일 때만)
+      if (currentTurn === 'player' && !lastCardDrawn) {
+        cardBackElement.style.cursor = 'pointer';
+        cardBackElement.addEventListener('click', playerDrawCard);
+      } else {
+        cardBackElement.style.cursor = 'default';
+      }
+      
+      drawContainer.appendChild(cardBackElement);
+      deckCountElement.textContent = `${deck.length}장`;
+    }
+    
+    function updateTurnDisplay() {
+      const turnIndicator = document.querySelector('.turn-indicator');
+      const turnText = document.getElementById('turnText');
+      
+      if (currentTurn === 'player') {
+        turnIndicator.classList.add('active');
+        turnText.textContent = '내 차례';
+      } else {
+        turnIndicator.classList.remove('active');
+        turnText.textContent = '상대 차례';
+      }
+    }
+    
+    function updateMessage() {
+      const messageElement = document.getElementById('message');
+      
+      if (!gameStarted) {
+        messageElement.textContent = '게임을 시작합니다...';
+        return;
+      }
+      
+      if (currentTurn === 'player') {
+        if (lastCardDrawn) {
+          const lastCard = myHand[myHand.length - 1];
+          if (isPlayable(lastCard)) {
+            messageElement.textContent = '뽑은 카드를 내거나 턴을 넘기세요.';
+          } else {
+            messageElement.textContent = '낼 수 있는 카드가 없습니다. 턴을 넘기세요.';
+          }
+        } else {
+          const hasPlayableCard = myHand.some(card => isPlayable(card));
+          if (hasPlayableCard) {
+            messageElement.textContent = '카드를 내거나 카드를 뽑으세요.';
+          } else {
+            messageElement.textContent = '낼 수 있는 카드가 없습니다. 카드를 뽑으세요.';
+          }
+        }
+      } else {
+        messageElement.textContent = '상대의 턴입니다...';
+      }
+    }
+    
+    /* ========== 게임 결과 처리 ========== */
+    function endGame(winner) {
+      gameStarted = false;
+      gameEndTime = new Date();
+      
+      // 배경 음악 중지
+      if (musicEnabled) {
+        bgMusic.pause();
+      }
+      
+      // 승리 효과음
+      if (winner === 'player') {
+        playSound('win');
+      } else {
+        playSound('lose');
+      }
+      
+      // 게임 타이머 중지
+      if (gameTimer) {
+        clearInterval(gameTimer);
+      }
+      
+      // 게임 통계 업데이트
+      document.getElementById('gameTime').textContent = formatTime(gameDuration);
+      document.getElementById('cardsPlayed').textContent = `${cardsPlayedCount}장`;
+      document.getElementById('cardsDrawn').textContent = `${cardsDrawnCount}장`;
+      
+      // 결과 모달 제목 설정
+      const resultTitle = document.querySelector('.result-title');
+      if (winner === 'player') {
+        resultTitle.textContent = '승리했습니다!';
+        resultTitle.className = 'result-title win-message';
+        document.querySelector('.modal-content p').textContent = '축하합니다! 상대보다 먼저 모든 카드를 내셨습니다.';
+        
+        // 승리 시 색종이 효과
+        createConfetti();
+      } else {
+        resultTitle.textContent = '패배했습니다!';
+        resultTitle.className = 'result-title lose-message';
+        document.querySelector('.modal-content p').textContent = '안타깝네요! 상대가 먼저 모든 카드를 냈습니다.';
+      }
+      
+      // 결과 모달 표시
+      setTimeout(() => {
+        gameResultModal.style.display = 'flex';
+      }, 1000);
+    }
+    
+    function createConfetti() {
+      for (let i = 0; i < 100; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        
+        // 랜덤 색상
+        const colors = ['#f1c40f', '#e74c3c', '#3498db', '#2ecc71', '#9b59b6'];
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        
+        // 랜덤 크기
+        const size = Math.random() * 10 + 5;
+        confetti.style.width = `${size}px`;
+        confetti.style.height = `${size}px`;
+        
+        // 랜덤 위치
+        confetti.style.left = `${Math.random() * 100}%`;
+        confetti.style.top = `-10px`;
+        
+        // 랜덤 회전
+        confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+        
+        document.body.appendChild(confetti);
+        
+        // 애니메이션
+        gsap.to(confetti, {
+          y: window.innerHeight + 100,
+          x: Math.random() * 200 - 100,
+          rotation: Math.random() * 720,
+          duration: Math.random() * 3 + 2,
+          ease: 'power1.out',
+          onComplete: () => confetti.remove()
+        });
+      }
+    }
+    
+    function restartGame() {
+      // 결과 모달 닫기
+      gameResultModal.style.display = 'none';
+      
+      // 게임 재시작
+      if (gameMode === 'ai') {
+        initGame();
+      } else if (gameMode === 'p2p' && p2pRole === 'host') {
+        initGame();
+        sendGameState();
+      }
+      
+      // 배경 음악 재시작
+      if (musicEnabled) {
+        bgMusic.currentTime = 0;
+        bgMusic.play().catch(e => console.log('Music play error:', e));
+      }
+      
+      // 타이머 재시작
+      startGameTimer();
+      
+      // 통계 초기화
+      cardsPlayedCount = 0;
+      cardsDrawnCount = 0;
+      
+      showToast('info', '게임을 다시 시작합니다.');
+    }
+    
+    function backToMenu() {
+      // 모달 닫기
+      gameResultModal.style.display = 'none';
+      settingsModal.style.display = 'none';
+      
+      // P2P 연결 종료
+      if (peer) {
+        peer.destroy();
+        peer = null;
+      }
+      
+      // 게임 컨테이너 숨기기
+      gameContainer.style.display = 'none';
+      signalPanel.style.display = 'none';
+      
+      // 메뉴 표시
+      menuScreen.classList.remove('hidden');
+      
+      // 게임 타이머 중지
+      if (gameTimer) {
+        clearInterval(gameTimer);
+      }
+      
+      // 배경 음악 중지
+      if (musicEnabled) {
+        bgMusic.pause();
+      }
+      
+      // 게임 상태 초기화
+      gameStarted = false;
+      reconnectAttempts = 0;
+      connectionEstablished = false;
+    }
+    
+    /* ========== 유틸리티 함수 ========== */
+    function startGameTimer() {
+      gameStartTime = new Date();
+      gameDuration = 0;
+      
+      if (gameTimer) {
+        clearInterval(gameTimer);
+      }
+      
+      gameTimer = setInterval(() => {
+        const now = new Date();
+        gameDuration = Math.floor((now - gameStartTime) / 1000);
+      }, 1000);
+    }
+    
+    function formatTime(seconds) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins}분 ${secs}초`;
+    }
+    
+    function animateCardPlay(cardElement, callback) {
+      if (!cardElement) {
+        if (callback) callback();
+        return;
+      }
+      
+      const discardPileElement = document.querySelector('#discardPile');
+      if (!discardPileElement) {
+        if (callback) callback();
+        return;
+      }
+      
+      const cardRect = cardElement.getBoundingClientRect();
+      const discardRect = discardPileElement.getBoundingClientRect();
+      
+      const cloneCard = cardElement.cloneNode(true);
+      cloneCard.style.position = 'fixed';
+      cloneCard.style.left = cardRect.left + 'px';
+      cloneCard.style.top = cardRect.top + 'px';
+      cloneCard.style.width = cardRect.width + 'px';
+      cloneCard.style.height = cardRect.height + 'px';
+      cloneCard.style.zIndex = '1000';
+      cloneCard.style.transition = 'none';
+      cloneCard.style.transform = 'none';
+      
+      document.body.appendChild(cloneCard);
+      
+      const centerX = discardRect.left + discardRect.width / 2 - cardRect.width / 2;
+      const centerY = discardRect.top + discardRect.height / 2 - cardRect.height / 2;
+      
+      // GSAP 애니메이션
+      gsap.to(cloneCard, {
+        left: centerX,
+        top: centerY,
+        rotation: Math.random() * 20 - 10,
+        scale: 0.9,
+        ease: "power2.out",
+        duration: 0.5,
+        onComplete: () => {
+          cloneCard.remove();
+          if (callback) callback();
+        }
+      });
+    }
+    
+    function toggleSettingsModal() {
+      settingsModal.style.display = settingsModal.style.display === 'flex' ? 'none' : 'flex';
+      
+      // 현재 설정 표시
+      document.getElementById('soundToggle').checked = soundEnabled;
+      document.getElementById('musicToggle').checked = musicEnabled;
+      document.getElementById('colorBlindToggle').checked = colorBlindMode;
+      document.getElementById('volumeSlider').value = volumeLevel;
+      document.getElementById('volumeValue').textContent = `${volumeLevel}%`;
+    }
+    
+    function saveSettings() {
+      soundEnabled = document.getElementById('soundToggle').checked;
+      musicEnabled = document.getElementById('musicToggle').checked;
+      colorBlindMode = document.getElementById('colorBlindToggle').checked;
+      volumeLevel = document.getElementById('volumeSlider').value;
+      
+      // 색약자 모드 적용
+      document.body.classList.toggle('color-blind-mode', colorBlindMode);
+      
+      // 볼륨 적용
+      updateVolume();
+      
+      // 배경 음악 설정 적용
+      if (musicEnabled) {
+        bgMusic.play().catch(e => console.log('Music play error:', e));
+      } else {
+        bgMusic.pause();
+      }
+      
+      // 설정 모달 닫기
+      settingsModal.style.display = 'none';
+      
+      showToast('success', '설정이 저장되었습니다.');
+    }
+    
+    function showRules() {
+      // 게임 규칙 모달 (간단한 알림으로 대체)
+      showToast('info', 'UNO 규칙: 같은 색상이나 같은 숫자/기호의 카드를 내야 합니다. 특수 카드는 효과가 있습니다. 카드를 모두 내면 승리합니다!');
+    }
+    
+    function showToast(type, message, duration = 3000) {
+      const toastContainer = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      
+      let icon = '';
+      if (type === 'info') icon = 'ℹ️';
+      else if (type === 'success') icon = '✅';
+      else if (type === 'warning') icon = '⚠️';
+      else if (type === 'error') icon = '❌';
+      
+      toast.innerHTML = `
+        <span class="toast-icon toast-${type}">${icon}</span>
+        <span>${message}</span>
+      `;
+      
+      toastContainer.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.remove();
+      }, duration);
     }
   </script>
 </body>
