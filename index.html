@@ -334,13 +334,6 @@
       background: rgba(255, 255, 255, 0.2);
     }
 
-
-
-  
-
-
-
-    
     .connection-status {
       margin-top: 1rem;
       padding: 0.8rem;
@@ -387,18 +380,20 @@
       display: none;
       max-width: 100%;
       width: 100%;
-      height: calc(100vh - 70px);
+      height: auto !important;
+      min-height: calc(100vh - 70px);
       box-sizing: border-box;
       margin: 0 auto;
       padding: 1rem;
       position: relative;
+      padding-bottom: 20px;
     }
 
     /* 게임 화면 레이아웃 */
     .game-layout {
-      display: grid;
-      grid-template-rows: auto 1fr auto;
-      height: 100%;
+      display: flex;
+      flex-direction: column;
+      height: auto !important;
       width: 90%;
       max-width: 800px;
       margin: 0 auto;
@@ -415,6 +410,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      min-height: 150px;
     }
 
     #opponentInfo {
@@ -505,6 +501,8 @@
       margin: 0 auto;
       width: 100%;
       max-width: 600px;
+      flex: 1;
+      min-height: 30vh;
     }
 
     .table-felt {
@@ -717,6 +715,7 @@
       position: relative;
       display: flex;
       justify-content: center;
+      min-height: 150px;
     }
 
     #playerHand {
@@ -733,18 +732,33 @@
       position: relative;
       min-height: 150px;
       width: 100%;
-      max-width: 600px;
+      max-width: 800px;
       overflow-x: auto;
       margin: 0 auto;
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-      padding: 0.5rem;
+      padding: 0.5rem 0 1.5rem 0;
       display: flex;
       justify-content: center;
+      scrollbar-width: thin;
     }
 
+    /* 스크롤바 스타일 개선 */
     .hand-wrapper::-webkit-scrollbar {
-      display: none;
+      display: block;
+      height: 6px;
+    }
+
+    .hand-wrapper::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+    }
+
+    .hand-wrapper::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 10px;
+    }
+
+    .hand-wrapper::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.5);
     }
 
     /* 카드 디자인 */
@@ -752,7 +766,6 @@
       width: 80px;
       height: 120px;
       border-radius: var(--card-border-radius);
-      position: absolute;
       box-shadow: var(--card-shadow);
       background: linear-gradient(to bottom, #fff, #eee);
       border: 2px solid rgba(0, 0, 0, 0.2);
@@ -768,6 +781,7 @@
       transform-origin: center bottom;
       color: white;
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      position: relative;
     }
 
     .card-player {
@@ -782,6 +796,30 @@
       transform: translateY(-20px) scale(1.1);
       z-index: 10;
       margin: 0 5px;
+    }
+    
+    /* 카드 펼치기 모드 */
+    .spread-mode .card-player {
+      margin: 0 5px !important;
+    }
+
+    .spread-btn {
+      position: absolute;
+      top: -40px;
+      right: 10px;
+      padding: 5px 10px;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.3s;
+      z-index: 10;
+    }
+
+    .spread-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
     }
     
     /* 플레이 가능한 카드에 추가 스타일 */
@@ -852,7 +890,7 @@
       transform: rotate(180deg);
     }
 
-    /* 1. 카드 뒷면 디자인 개선 */
+    /* 카드 뒷면 디자인 개선 */
     .card-back {
       background: #1a1a1a !important; 
       border: 2px solid rgba(255, 255, 255, 0.3) !important;
@@ -865,7 +903,7 @@
       position: relative;
       overflow: hidden;
     }
-    
+
     .card-back:before {
       content: "UNO";
       font-size: 1.5rem;
@@ -881,88 +919,11 @@
       top: 45%;
       left: -25%;
     }
-    
+
     .card-back:after {
-      content: "";
-      display: none;
+      display: none !important;
     }
-    
-    /* 2. 레이아웃 버그 수정 */
-    #gameContainer {
-      height: auto !important;
-      min-height: calc(100vh - 70px);
-      padding-bottom: 20px;
-    }
-    
-    .game-layout {
-      height: auto !important;
-      display: flex;
-      flex-direction: column;
-    }
-    
-    .table-area {
-      flex: 1;
-      min-height: 30vh;
-      display: flex;
-      align-items: center;
-    }
-    
-    .opponent-area, .player-area {
-      min-height: 150px;
-    }
-    
-    .hand-wrapper {
-      max-width: 800px;
-      overflow-x: auto;
-      scrollbar-width: thin;
-      margin: 0 auto;
-      padding: 0.5rem 0 1.5rem 0;
-      position: relative;
-    }
-    
-    /* 스크롤바 스타일 개선 */
-    .hand-wrapper::-webkit-scrollbar {
-      display: block;
-      height: 6px;
-    }
-    
-    .hand-wrapper::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
-    }
-    
-    .hand-wrapper::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.3);
-      border-radius: 10px;
-    }
-    
-    .hand-wrapper::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.5);
-    }
-    
-    /* 카드 펼치기 모드 */
-    .spread-mode .card-player {
-      margin: 0 5px !important;
-    }
-    
-    .spread-btn {
-      position: absolute;
-      top: -40px;
-      right: 10px;
-      padding: 5px 10px;
-      background: rgba(255, 255, 255, 0.2);
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      transition: background 0.3s;
-      z-index: 10;
-    }
-    
-    .spread-btn:hover {
-      background: rgba(255, 255, 255, 0.3);
-    }
+
     /* 플레이 애니메이션 */
     .play-animation {
       animation: playCardAnim 0.5s ease-out;
@@ -1616,6 +1577,7 @@
     let cardsPlayedCount = 0;
     let cardsDrawnCount = 0;
     let cardsSpread = false;
+    
     // 게임 타이머
     let gameTimer = null;
     let gameStartTime = null;
@@ -1676,60 +1638,6 @@
     const numbers = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
     const specialTypes = ["skip", "reverse", "draw2"];
     const wildTypes = ["wild", "draw4"];
-
-
-
-    function setupAdditionalListeners() {
-      // 카드 펼치기/접기 버튼 이벤트 리스너
-      const spreadBtn = document.createElement('button');
-      spreadBtn.id = 'spreadCardsBtn';
-      spreadBtn.className = 'spread-btn';
-      spreadBtn.textContent = '카드 펼치기';
-      spreadBtn.addEventListener('click', toggleCardSpread);
-      
-      // 버튼을 hand-wrapper에 추가
-      const handWrapper = document.querySelector('.hand-wrapper');
-      if (handWrapper) {
-        handWrapper.appendChild(spreadBtn);
-      }
-      
-      // 게임 레이아웃 조정
-      adjustGameLayout();
-      window.addEventListener('resize', adjustGameLayout);
-    }
-    
-    function toggleCardSpread() {
-      const handWrapper = document.querySelector('.hand-wrapper');
-      const spreadBtn = document.getElementById('spreadCardsBtn');
-      
-      cardsSpread = !cardsSpread;
-      
-      if (cardsSpread) {
-        handWrapper.classList.add('spread-mode');
-        spreadBtn.textContent = '카드 접기';
-      } else {
-        handWrapper.classList.remove('spread-mode');
-        spreadBtn.textContent = '카드 펼치기';
-      }
-      
-      // 카드 UI 업데이트
-      updateGameUI();
-    }
-    
-    function adjustGameLayout() {
-      const gameContainer = document.getElementById('gameContainer');
-      if (!gameContainer) return;
-      
-      // 화면 높이에 맞게 조정
-      const headerHeight = document.querySelector('header')?.offsetHeight || 0;
-      const viewportHeight = window.innerHeight;
-      
-      gameContainer.style.minHeight = `${viewportHeight - headerHeight}px`;
-    }
-
-
-
-
     
     // 카드 아이콘 (숫자는 그대로, 특수/와일드 카드에 아이콘 적용)
     function getCardIcon(card) {
@@ -1750,7 +1658,7 @@
     document.addEventListener('DOMContentLoaded', function() {
       // 메인 메뉴 버튼 이벤트
       setupModeSelection();
-      setupAdditionalListeners();
+      
       document.getElementById('startGameBtn').addEventListener('click', () => {
         if (gameMode === 'ai') {
           startAIGame();
@@ -1785,6 +1693,9 @@
       
       // 설정 모달 이벤트
       setupSettingsControls();
+      
+      // 추가 리스너 설정
+      setupAdditionalListeners();
       
       // 볼륨 초기화
       updateVolume();
@@ -1827,6 +1738,57 @@
           p2pRole = btn.dataset.role;
         });
       });
+    }
+    
+    // 추가 설정 리스너
+    function setupAdditionalListeners() {
+      // 카드 펼치기/접기 버튼 이벤트 리스너
+      const spreadBtn = document.createElement('button');
+      spreadBtn.id = 'spreadCardsBtn';
+      spreadBtn.className = 'spread-btn';
+      spreadBtn.textContent = '카드 펼치기';
+      spreadBtn.addEventListener('click', toggleCardSpread);
+      
+      // 버튼을 hand-wrapper에 추가
+      const handWrapper = document.querySelector('.hand-wrapper');
+      if (handWrapper) {
+        handWrapper.appendChild(spreadBtn);
+      }
+      
+      // 게임 레이아웃 조정
+      adjustGameLayout();
+      window.addEventListener('resize', adjustGameLayout);
+    }
+    
+    // 카드 펼치기/접기 토글 함수
+    function toggleCardSpread() {
+      const handWrapper = document.querySelector('.hand-wrapper');
+      const spreadBtn = document.getElementById('spreadCardsBtn');
+      
+      cardsSpread = !cardsSpread;
+      
+      if (cardsSpread) {
+        handWrapper.classList.add('spread-mode');
+        spreadBtn.textContent = '카드 접기';
+      } else {
+        handWrapper.classList.remove('spread-mode');
+        spreadBtn.textContent = '카드 펼치기';
+      }
+      
+      // 카드 UI 업데이트
+      updateGameUI();
+    }
+    
+    // 게임 레이아웃 조정 함수
+    function adjustGameLayout() {
+      const gameContainer = document.getElementById('gameContainer');
+      if (!gameContainer) return;
+      
+      // 화면 높이에 맞게 조정
+      const headerHeight = document.querySelector('header')?.offsetHeight || 0;
+      const viewportHeight = window.innerHeight;
+      
+      gameContainer.style.minHeight = `${viewportHeight - headerHeight}px`;
     }
     
     function setupSignalTabs() {
@@ -2155,7 +2117,7 @@
       logCardPlayability(card);
       
       if (isPlayable(card)) {
-        // 카드 이동 애니메이션
+// 카드 이동 애니메이션
         const cardElement = document.querySelector(`#playerHand .card-player:nth-child(${cardIndex + 1})`);
         if (!cardElement) {
           console.error('카드 요소를 찾을 수 없습니다:', cardIndex);
