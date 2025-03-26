@@ -334,6 +334,13 @@
       background: rgba(255, 255, 255, 0.2);
     }
 
+
+
+  
+
+
+
+    
     .connection-status {
       margin-top: 1rem;
       padding: 0.8rem;
@@ -392,9 +399,11 @@
       display: grid;
       grid-template-rows: auto 1fr auto;
       height: 100%;
-      width: 100%;
-      max-width: 1200px;
+      width: 90%;
+      max-width: 800px;
       margin: 0 auto;
+      justify-content: center;
+      align-items: center;
     }
 
     /* 상대방 영역 */
@@ -402,6 +411,10 @@
       padding: 1rem;
       text-align: center;
       position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
 
     #opponentInfo {
@@ -489,6 +502,9 @@
       align-items: center;
       position: relative;
       padding: 1rem;
+      margin: 0 auto;
+      width: 100%;
+      max-width: 600px;
     }
 
     .table-felt {
@@ -699,6 +715,8 @@
     .player-area {
       padding: 1rem;
       position: relative;
+      display: flex;
+      justify-content: center;
     }
 
     #playerHand {
@@ -708,17 +726,21 @@
       display: flex;
       justify-content: center;
       perspective: 1000px;
+      width: 100%;
     }
 
     .hand-wrapper {
       position: relative;
       min-height: 150px;
-      max-width: 90%;
+      width: 100%;
+      max-width: 600px;
       overflow-x: auto;
       margin: 0 auto;
       -ms-overflow-style: none;
       scrollbar-width: none;
       padding: 0.5rem;
+      display: flex;
+      justify-content: center;
     }
 
     .hand-wrapper::-webkit-scrollbar {
@@ -753,12 +775,20 @@
       margin: 0 -15px;
       display: inline-block;
       transition: transform 0.3s, margin 0.3s;
+      z-index: 1;
     }
 
     .card-player:hover {
       transform: translateY(-20px) scale(1.1);
       z-index: 10;
       margin: 0 5px;
+    }
+    
+    /* 플레이 가능한 카드에 추가 스타일 */
+    .card.can-play {
+      box-shadow: 0 0 0 3px #f1c40f, var(--card-shadow);
+      animation: canPlay 1.5s infinite;
+      cursor: pointer !important;
     }
 
     .card.can-play {
@@ -822,26 +852,117 @@
       transform: rotate(180deg);
     }
 
+    /* 1. 카드 뒷면 디자인 개선 */
     .card-back {
-      background: var(--card-back-color);
-      border: 2px solid rgba(0, 0, 0, 0.3);
+      background: #1a1a1a !important; 
+      border: 2px solid rgba(255, 255, 255, 0.3) !important;
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
       font-size: 1.2rem;
       font-weight: bold;
+      position: relative;
+      overflow: hidden;
     }
-
-    .card-back:after {
+    
+    .card-back:before {
       content: "UNO";
       font-size: 1.5rem;
-      transform: rotate(-45deg);
+      font-weight: bold;
       position: absolute;
       background: var(--primary-color);
       padding: 0.3rem 1.5rem;
+      transform: rotate(-45deg);
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+      width: 150%;
+      text-align: center;
+      top: 45%;
+      left: -25%;
     }
-
+    
+    .card-back:after {
+      content: "";
+      display: none;
+    }
+    
+    /* 2. 레이아웃 버그 수정 */
+    #gameContainer {
+      height: auto !important;
+      min-height: calc(100vh - 70px);
+      padding-bottom: 20px;
+    }
+    
+    .game-layout {
+      height: auto !important;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .table-area {
+      flex: 1;
+      min-height: 30vh;
+      display: flex;
+      align-items: center;
+    }
+    
+    .opponent-area, .player-area {
+      min-height: 150px;
+    }
+    
+    .hand-wrapper {
+      max-width: 800px;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      margin: 0 auto;
+      padding: 0.5rem 0 1.5rem 0;
+      position: relative;
+    }
+    
+    /* 스크롤바 스타일 개선 */
+    .hand-wrapper::-webkit-scrollbar {
+      display: block;
+      height: 6px;
+    }
+    
+    .hand-wrapper::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+    }
+    
+    .hand-wrapper::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 10px;
+    }
+    
+    .hand-wrapper::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.5);
+    }
+    
+    /* 카드 펼치기 모드 */
+    .spread-mode .card-player {
+      margin: 0 5px !important;
+    }
+    
+    .spread-btn {
+      position: absolute;
+      top: -40px;
+      right: 10px;
+      padding: 5px 10px;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.3s;
+      z-index: 10;
+    }
+    
+    .spread-btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
     /* 플레이 애니메이션 */
     .play-animation {
       animation: playCardAnim 0.5s ease-out;
@@ -1255,7 +1376,7 @@
     <p class="menu-description">친구와 함께 플레이하거나 AI와 대결하세요!</p>
     
     <div class="game-modes">
-      <div class="mode-card" data-mode="ai">
+      <div class="mode-card selected" data-mode="ai">
         <div class="mode-icon">🤖</div>
         <div class="mode-title">AI 대전</div>
         <div class="mode-desc">인공지능 상대와 1:1 대결</div>
@@ -1267,7 +1388,7 @@
       </div>
     </div>
 
-    <div id="aiDifficultySelect" class="difficulty-select">
+    <div id="aiDifficultySelect" class="difficulty-select visible">
       <div class="settings-label">난이도 선택:</div>
       <div class="difficulty-options">
         <button class="difficulty-btn" data-difficulty="easy">쉬움</button>
@@ -1327,7 +1448,10 @@
       <!-- 상대방 영역 -->
       <div class="opponent-area">
         <div class="opponent-avatar">🤖</div>
-        <div id="opponentInfo">상대 카드: 7장</div>
+        <div id="opponentInfo">
+          <span class="opponent-status"></span>
+          상대 카드: 7장
+        </div>
         <div class="opponent-cards" id="opponentCards"></div>
       </div>
       
@@ -1491,7 +1615,7 @@
     let gameEndTime = null;
     let cardsPlayedCount = 0;
     let cardsDrawnCount = 0;
-    
+    let cardsSpread = false;
     // 게임 타이머
     let gameTimer = null;
     let gameStartTime = null;
@@ -1552,6 +1676,60 @@
     const numbers = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"];
     const specialTypes = ["skip", "reverse", "draw2"];
     const wildTypes = ["wild", "draw4"];
+
+
+
+    function setupAdditionalListeners() {
+      // 카드 펼치기/접기 버튼 이벤트 리스너
+      const spreadBtn = document.createElement('button');
+      spreadBtn.id = 'spreadCardsBtn';
+      spreadBtn.className = 'spread-btn';
+      spreadBtn.textContent = '카드 펼치기';
+      spreadBtn.addEventListener('click', toggleCardSpread);
+      
+      // 버튼을 hand-wrapper에 추가
+      const handWrapper = document.querySelector('.hand-wrapper');
+      if (handWrapper) {
+        handWrapper.appendChild(spreadBtn);
+      }
+      
+      // 게임 레이아웃 조정
+      adjustGameLayout();
+      window.addEventListener('resize', adjustGameLayout);
+    }
+    
+    function toggleCardSpread() {
+      const handWrapper = document.querySelector('.hand-wrapper');
+      const spreadBtn = document.getElementById('spreadCardsBtn');
+      
+      cardsSpread = !cardsSpread;
+      
+      if (cardsSpread) {
+        handWrapper.classList.add('spread-mode');
+        spreadBtn.textContent = '카드 접기';
+      } else {
+        handWrapper.classList.remove('spread-mode');
+        spreadBtn.textContent = '카드 펼치기';
+      }
+      
+      // 카드 UI 업데이트
+      updateGameUI();
+    }
+    
+    function adjustGameLayout() {
+      const gameContainer = document.getElementById('gameContainer');
+      if (!gameContainer) return;
+      
+      // 화면 높이에 맞게 조정
+      const headerHeight = document.querySelector('header')?.offsetHeight || 0;
+      const viewportHeight = window.innerHeight;
+      
+      gameContainer.style.minHeight = `${viewportHeight - headerHeight}px`;
+    }
+
+
+
+
     
     // 카드 아이콘 (숫자는 그대로, 특수/와일드 카드에 아이콘 적용)
     function getCardIcon(card) {
@@ -1572,7 +1750,7 @@
     document.addEventListener('DOMContentLoaded', function() {
       // 메인 메뉴 버튼 이벤트
       setupModeSelection();
-      
+      setupAdditionalListeners();
       document.getElementById('startGameBtn').addEventListener('click', () => {
         if (gameMode === 'ai') {
           startAIGame();
@@ -1870,7 +2048,7 @@
       myHand = [];
       opponentHand = [];
       opponentCardCount = 0;
-      currentTurn = 'player'; // 플레이어부터 시작
+      currentTurn = Math.random() < 0.5 ? 'player' : 'opponent'; // 무작위로 첫 턴 결정
       lastCardDrawn = false;
       canCallUno = false;
       unoWasCalled = false;
@@ -1966,13 +2144,26 @@
     
     /* ========== 게임 플레이 로직 ========== */
     function playerPlay(cardIndex) {
-      if (currentTurn !== 'player') return;
+      if (currentTurn !== 'player') {
+        showToast('warning', '당신의 차례가 아닙니다!');
+        return;
+      }
       
       const card = myHand[cardIndex];
+      
+      // 디버깅을 위해 카드 플레이 가능 여부 로깅
+      logCardPlayability(card);
       
       if (isPlayable(card)) {
         // 카드 이동 애니메이션
         const cardElement = document.querySelector(`#playerHand .card-player:nth-child(${cardIndex + 1})`);
+        if (!cardElement) {
+          console.error('카드 요소를 찾을 수 없습니다:', cardIndex);
+          // 애니메이션 없이 카드 플레이 진행
+          playCard(card, cardIndex);
+          return;
+        }
+        
         animateCardPlay(cardElement, () => {
           // 카드 플레이 로직
           playCard(card, cardIndex);
@@ -2141,6 +2332,14 @@
       return card.color === currentColor || 
              (card.type === 'number' && card.value === currentValue) ||
              (card.type === 'special' && card.value === currentValue);
+    }
+    
+    // 디버깅용 함수 - 카드 정보 확인
+    function logCardPlayability(card) {
+      console.log('카드:', card);
+      console.log('현재 색상:', currentColor);
+      console.log('현재 값:', currentValue);
+      console.log('플레이 가능?', isPlayable(card));
     }
     
     function playerDrawCard() {
@@ -2591,6 +2790,11 @@
         const cardWrapper = document.createElement('div');
         cardWrapper.className = 'card-player';
         
+        // 펼치기 모드일 때 적용되는 스타일
+        if (cardsSpread) {
+          cardWrapper.style.margin = '0 5px';
+        }
+        
         const cardElement = document.createElement('div');
         cardElement.className = `card ${card.color}`;
         
@@ -2623,14 +2827,23 @@
           cardElement.classList.add('can-play');
         }
         
-        // 이벤트 리스너 (내 턴일 때만 활성화)
+        // 항상 클릭 이벤트 리스너 추가 (내 턴이 아니면 함수 내에서 처리)
+        cardElement.addEventListener('click', () => playerPlay(index));
+        
+        // 내 턴일 때 커서 스타일 변경
         if (currentTurn === 'player') {
-          cardElement.addEventListener('click', () => playerPlay(index));
+          cardElement.style.cursor = 'pointer';
         }
         
         cardWrapper.appendChild(cardElement);
         handContainer.appendChild(cardWrapper);
       });
+      
+      // 낼 수 있는 카드가 있는지 콘솔에 표시 (디버깅용)
+      if (currentTurn === 'player') {
+        const playableCount = sortedHand.filter(card => isPlayable(card)).length;
+        console.log(`낼 수 있는 카드: ${playableCount}개`);
+      }
     }
     
     function renderOpponentHand() {
@@ -2638,7 +2851,7 @@
       opponentCardsContainer.innerHTML = '';
       
       const count = gameMode === 'ai' ? opponentHand.length : opponentCardCount;
-      document.getElementById('opponentInfo').textContent = `상대 카드: ${count}장`;
+      document.getElementById('opponentInfo').innerHTML = `<span class="opponent-status"></span>상대 카드: ${count}장`;
       
       // 최대 10장만 표시 (UI 공간 제한)
       const visibleCount = Math.min(count, 10);
@@ -2659,11 +2872,13 @@
       
       // 상대방 상태 업데이트
       const opponentStatus = document.querySelector('.opponent-status');
-      if (currentTurn === 'opponent') {
-        opponentStatus.classList.add('active');
-      } else {
-        opponentStatus.classList.remove('active');
-        opponentStatus.classList.remove('thinking');
+      if (opponentStatus) {
+        if (currentTurn === 'opponent') {
+          opponentStatus.classList.add('active');
+        } else {
+          opponentStatus.classList.remove('active');
+          opponentStatus.classList.remove('thinking');
+        }
       }
     }
     
